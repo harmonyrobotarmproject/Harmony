@@ -2,8 +2,8 @@
 // 請修改以下值為您的 Supabase 專案設定
 
 // Supabase 設定 (從 Supabase Dashboard > Settings > API 取得)
-window.SUPABASE_URL = 'https://your-project-ref.supabase.co';
-window.SUPABASE_ANON_KEY = 'your-anon-key-here';
+window.SUPABASE_URL = 'https://tkuxcwatbfvuvvsyobbz.supabase.co';
+window.SUPABASE_ANON_KEY = 'sb_publishable_tY3La9Nr_zbIscbtyIH6XQ_OY_-OuIe';
 
 // AI 設定
 window.AI_CONFIG_DEFAULTS = {
@@ -41,7 +41,7 @@ window.AI_CONFIG_DEFAULTS = {
 };
 
 // 應用版本 (用於 cache-busting)
-window.APP_VERSION = 'v0.1.0_20260910';
+window.APP_VERSION = 'v0.1.1_20260910';
 
 // 除錯模式
 window.DEBUG_ENABLED = true;
