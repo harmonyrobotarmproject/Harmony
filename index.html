@@ -1,0 +1,472 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, interactive-widget=resizes-content">
+  <title>Harmony - Robot Arm Control Platform</title>
+  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect x='10' y='10' width='80' height='80' rx='15' fill='%230066cc'/%3E%3Cpath d='M30 50 L50 30 L70 50 M50 30 L50 70' stroke='%23fff' stroke-width='6' stroke-linecap='round' stroke-linejoin='round' fill='none'/%3E%3Ccircle cx='50' cy='50' r='12' fill='%23ff6b00'/%3E%3C/svg%3E">
+  
+  <!-- Cache Control -->
+  <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+  <meta http-equiv="Pragma" content="no-cache">
+  <meta http-equiv="Expires" content="0">
+
+  <!-- Global Error Catcher -->
+  <script>
+    (function () {
+      var _errs = [];
+      function _show(msg) {
+        _errs.push(msg);
+        var el = document.getElementById('js-error-banner');
+        if (!el) {
+          el = document.createElement('div');
+          el.id = 'js-error-banner';
+          el.style.cssText = 'position:fixed;top:0;left:0;right:0;z-index:99999;background:#dc2626;color:#fff;padding:12px 16px;font:13px/1.4 monospace;word-break:break-all;max-height:40vh;overflow:auto;box-shadow:0 2px 8px rgba(0,0,0,.4)';
+          document.body.appendChild(el);
+        }
+        el.textContent = _errs.join('\n---\n');
+      }
+      window.onerror = function (msg, src, line, col, err) {
+        _show('ERROR: ' + msg + '\n  at ' + src + ':' + line + ':' + col + (err ? '\n  stack: ' + (err.stack || '').substring(0, 500) : ''));
+      };
+      window.onunhandledrejection = function (e) {
+        var r = e && e.reason;
+        _show('UNHANDLED PROMISE: ' + (r && r.message ? r.message : String(r)) + (r && r.stack ? '\n  stack: ' + r.stack.substring(0, 500) : ''));
+      };
+    })();
+  </script>
+
+  <!-- Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&family=Noto+Sans+TC:wght@400;500;700;900&display=swap" rel="stylesheet">
+
+  <!-- Styles -->
+  <link rel="stylesheet" href="styles/main.css?v=20260910a">
+  <link rel="stylesheet" href="styles/harmony-theme.css?v=20260910a">
+
+  <!-- External Libraries -->
+  <script src="https://unpkg.com/lucide@0.469.0"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="https://cdn.jsdelivr.net/npm/marked@15/marked.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/dompurify@3/dist/purify.min.js"></script>
+
+  <!-- Config (must load first) -->
+  <script src="js/config.js"></script>
+  <script src="js/config.local.js" onerror="console.log('config.local.js not found, using defaults')"></script>
+
+  <!-- i18n (load before app) -->
+  <script src="js/locales/en.js"></script>
+  <script src="js/locales/zh-TW.js"></script>
+  <script src="js/locales/zh-CN.js"></script>
+  <script src="js/i18n.js"></script>
+
+  <!-- Core Libraries -->
+  <script src="js/db.js"></script>
+  <script src="js/render.js"></script>
+  <script src="js/ai-transport.js"></script>
+
+  <!-- Robot Modules -->
+  <script src="js/robot-vision.js"></script>
+  <script src="js/robot-parser.js"></script>
+  <script src="js/robot-logger.js"></script>
+  <script src="js/robot-simulator.js"></script>
+
+  <!-- Main App (must load last) -->
+  <script src="js/app.js"></script>
+
+  <!-- Inline Init -->
+  <script>
+    document.addEventListener('DOMContentLoaded', function() {
+      // Initialize Lucide icons
+      if (typeof lucide !== 'undefined') {
+        lucide.createIcons();
+      }
+      // Show version
+      document.getElementById('app-version').textContent = 'v0.1.0';
+      // Start app
+      if (typeof initApp === 'function') {
+        initApp();
+      }
+    });
+  </script>
+</head>
+<body>
+  <!-- Loading Bar -->
+  <div id="loading-bar" class="loading-bar hidden"></div>
+
+  <!-- JS Error Banner (injected by error catcher) -->
+
+  <!-- ===== Auth Page ===== -->
+  <div id="page-auth" class="page active">
+    <div class="auth-container">
+      <div class="auth-box">
+        <div class="auth-lang-pill">
+          <select id="lang-selector-auth" class="lang-selector" onchange="setLanguage(this.value)">
+            <option value="en">English</option>
+            <option value="zh-TW">繁體中文</option>
+            <option value="zh-CN">简体中文</option>
+          </select>
+        </div>
+
+        <div class="auth-brand">
+          <div class="auth-brand-icon">
+            <svg class="brand-robot" viewBox="0 0 100 100" fill="none" aria-hidden="true">
+              <rect x="10" y="10" width="80" height="80" rx="15" fill="#0066cc"/>
+              <path d="M30 50 L50 30 L70 50 M50 30 L50 70" stroke="#fff" stroke-width="6" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+              <circle cx="50" cy="50" r="12" fill="#ff6b00"/>
+            </svg>
+          </div>
+          <h1>Harmony</h1>
+          <div class="subtitle" data-i18n="auth.subtitle">Robot Arm Control Platform</div>
+        </div>
+
+        <form id="form-login" class="auth-form active">
+          <h2 data-i18n="auth.login.title">登入</h2>
+          <div class="form-group">
+            <label class="form-label" data-i18n="auth.login.email">電子郵件</label>
+            <input type="email" id="login-email" class="input" placeholder=" " data-i18n-placeholder="auth.login.email" required autocomplete="email">
+          </div>
+          <div class="form-group">
+            <label class="form-label" data-i18n="auth.login.password">密碼</label>
+            <div class="pwd-field-wrap">
+              <input type="password" id="login-password" class="input" placeholder=" " data-i18n-placeholder="auth.login.password" required autocomplete="current-password">
+              <button type="button" class="pwd-toggle btn-ghost" onclick="togglePwdVis(this)" aria-label="Toggle password visibility"><i data-lucide="eye"></i></button>
+            </div>
+          </div>
+          <button type="submit" class="btn btn-primary btn-lg" style="width:100%" data-i18n="auth.login.submit">登入</button>
+          <button type="button" id="btn-guest" class="btn btn-secondary btn-lg" style="width:100%" data-i18n="auth.guest.login"><i data-lucide="user"></i> 訪客登入</button>
+          <button type="button" id="btn-guest-continue" class="btn btn-outline btn-lg hidden" style="width:100%" data-i18n="auth.guest.continue"><i data-lucide="log-in"></i> 繼續使用訪客身份</button>
+          <p class="auth-switch">
+            <span data-i18n="auth.login.switch">還沒有帳號？</span>
+            <a href="#" onclick="showSignup()" data-i18n="auth.login.switchLink">註冊</a>
+          </p>
+        </form>
+
+        <form id="form-signup" class="auth-form">
+          <h2 data-i18n="auth.signup.title">註冊</h2>
+          <div class="form-group">
+            <label class="form-label" data-i18n="auth.signup.name">顯示名稱</label>
+            <input type="text" id="signup-name" class="input" placeholder=" " data-i18n-placeholder="auth.signup.name" required autocomplete="name">
+          </div>
+          <div class="form-group">
+            <label class="form-label" data-i18n="auth.signup.email">電子郵件</label>
+            <input type="email" id="signup-email" class="input" placeholder=" " data-i18n-placeholder="auth.signup.email" required autocomplete="email">
+          </div>
+          <div class="form-group">
+            <label class="form-label" data-i18n="auth.signup.password">密碼</label>
+            <div class="pwd-field-wrap">
+              <input type="password" id="signup-password" class="input" placeholder=" " data-i18n-placeholder="auth.signup.password" minlength="6" required autocomplete="new-password">
+              <button type="button" class="pwd-toggle btn-ghost" onclick="togglePwdVis(this)" aria-label="Toggle password visibility"><i data-lucide="eye"></i></button>
+            </div>
+          </div>
+          <input type="hidden" name="role" value="student">
+          <button type="submit" class="btn btn-primary btn-lg" style="width:100%" data-i18n="auth.signup.submit">註冊</button>
+          <p class="auth-switch">
+            <span data-i18n="auth.signup.switch">已經有帳號？</span>
+            <a href="#" onclick="showLogin()" data-i18n="auth.signup.switchLink">登入</a>
+          </p>
+        </form>
+
+        <p id="auth-error" class="auth-error"></p>
+
+        <p class="auth-notice"><i data-lucide="shield-alert"></i> <span data-i18n="auth.noticeConsent">使用本平台即表示您同意我們的 </span><a href="#" onclick="showModal('modal-notice');return false;" data-i18n="help.noticeHeading">隱私權與使用條款</a></p>
+        <button type="button" onclick="showModal('modal-about')" class="btn btn-about btn-outline" style="width:100%"><i data-lucide="info"></i> <span data-i18n="about.btn">關於本平台</span></button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== Main Page ===== -->
+  <div id="page-main" class="page">
+    <!-- Pause Banner -->
+    <div id="pause-banner" class="pause-banner hidden">
+      <span data-i18n="error.supabasePause">後端服務暫停，請至 Supabase 重新啟動</span>
+      <a href="https://supabase.com/dashboard" target="_blank">Supabase</a>
+      <button onclick="hidePauseBanner()" class="banner-close">&times;</button>
+    </div>
+
+    <div class="main-layout">
+      <!-- Topbar -->
+      <header class="topbar">
+        <div class="topbar-left">
+          <div class="brand-robot brand-robot-sm" aria-hidden="true">
+            <svg viewBox="0 0 100 100" fill="none"><rect x="10" y="10" width="80" height="80" rx="15" fill="#0066cc"/><path d="M30 50 L50 30 L70 50 M50 30 L50 70" stroke="#fff" stroke-width="6" stroke-linecap="round" stroke-linejoin="round" fill="none"/><circle cx="50" cy="50" r="12" fill="#ff6b00"/></svg>
+          </div>
+          <div>
+            <div style="font-weight:700;font-size:1.125rem">Harmony</div>
+            <div style="font-size:0.7rem;color:var(--robot-text-muted);text-transform:uppercase;letter-spacing:0.1em">Robot Arm Control</div>
+          </div>
+        </div>
+
+        <div class="topbar-right">
+          <span id="user-badge" class="user-badge hidden">
+            <span class="avatar" id="user-avatar"></span>
+            <span id="user-name"></span>
+            <span id="user-role-badge" class="badge badge-neutral hidden"></span>
+          </span>
+
+          <span id="app-version" class="app-version topbar-more-desktop" style="font-size:0.7rem;color:var(--robot-text-muted)"></span>
+
+          <select id="lang-selector" class="lang-selector topbar-more-desktop" onchange="setLanguage(this.value)">
+            <option value="en">English</option>
+            <option value="zh-TW">繁體中文</option>
+            <option value="zh-CN">简体中文</option>
+          </select>
+
+          <button onclick="showModal('modal-help')" class="btn btn-icon topbar-more-desktop" aria-label="Help" title="Help"><i data-lucide="help-circle"></i></button>
+
+          <div class="topbar-more" id="topbar-more">
+            <button class="btn btn-icon" id="btn-topbar-more" onclick="toggleTopbarMore()" aria-label="Settings" title="Settings"><i data-lucide="sliders-horizontal"></i></button>
+            <div class="more-dropdown hidden" id="topbar-more-dropdown">
+              <div class="more-dropdown-label" data-i18n="topbar.language">Language</div>
+              <select id="lang-selector-mobile" class="lang-selector" style="width:100%;margin-bottom:8px" onchange="setLanguage(this.value);closeTopbarMore()">
+                <option value="en">English</option>
+                <option value="zh-TW">繁體中文</option>
+                <option value="zh-CN">简体中文</option>
+              </select>
+              <button class="btn btn-global" onclick="closeTopbarMore();showModal('modal-help')"><i data-lucide="help-circle"></i> <span data-i18n="topbar.help">Help</span></button>
+              <button onclick="closeTopbarMore();logout()"><i data-lucide="log-out"></i> <span data-i18n="topbar.logout">Logout</span></button>
+            </div>
+          </div>
+        </div>
+
+        <nav class="nav-tabs hidden" id="nav-tabs" role="tablist">
+          <button class="nav-tab active" role="tab" aria-selected="true" data-view="chat" onclick="switchView('chat')" data-i18n="topbar.navChat"><i data-lucide="message-circle"></i> 聊天室</button>
+          <button class="nav-tab hidden" role="tab" aria-selected="false" data-view="admin" onclick="switchView('admin')" id="nav-tab-admin" data-i18n="topbar.navAdmin"><i data-lucide="settings"></i> 管理員</button>
+          <button class="nav-tab hidden" role="tab" aria-selected="false" data-view="teacher" onclick="switchView('teacher')" id="nav-tab-teacher" data-i18n="topbar.navTeacher"><i data-lucide="clipboard-list"></i> 教師</button>
+        </nav>
+      </header>
+
+      <!-- Main Content -->
+      <div class="content">
+        <!-- Chat View -->
+        <div id="view-chat" class="view active">
+          <div class="sidebar">
+            <div class="sidebar-header">
+              <span class="sidebar-title" data-i18n="session.list">工作階段</span>
+              <button class="btn btn-icon btn-sm" onclick="showNewSessionModal()" aria-label="New Session"><i data-lucide="plus"></i></button>
+            </div>
+            <div class="sidebar-content" id="session-list">
+              <div class="empty-state" id="empty-sessions">
+                <i data-lucide="image"></i>
+                <h3 data-i18n="session.noSessions">尚無工作階段</h3>
+                <p data-i18n="session.noSessionsDesc">點擊「新增工作階段」上傳測試圖片開始模擬</p>
+              </div>
+            </div>
+            <div class="sidebar-footer">
+              <button class="btn btn-primary" style="width:100%" onclick="showNewSessionModal()"><i data-lucide="plus"></i> <span data-i18n="session.create">新增工作階段</span></button>
+            </div>
+          </div>
+
+          <div class="view active" style="display:flex;flex-direction:column;height:100%">
+            <div class="chat-header">
+              <h2><i data-lucide="cpu"></i> <span id="current-session-name" data-i18n="chat.noSession">請選擇或建立工作階段</span></h2>
+              <div class="session-info">
+                <span id="session-status" class="sim-status idle"><span class="dot"></span> <span data-i18n="robot.simulator.statusIdle">待機</span></span>
+              </div>
+            </div>
+
+            <div class="chat-messages" id="message-area" role="log" aria-live="polite">
+              <!-- Messages rendered here -->
+            </div>
+
+            <div class="chat-input-area">
+              <div class="chat-input-wrapper">
+                <textarea id="chat-input" class="chat-input" placeholder="輸入訊息或機械手臂指令..." data-i18n-placeholder="chat.placeholder" rows="1"></textarea>
+                <div class="chat-input-actions">
+                  <button class="btn btn-icon" onclick="handleImageUpload()" aria-label="Upload Image" title="上傳圖片"><i data-lucide="image"></i></button>
+                  <button class="btn btn-icon" onclick="toggleAiPanel()" aria-label="AI Assist" title="AI 協助"><i data-lucide="bot"></i></button>
+                  <button class="btn btn-primary" onclick="sendMessage()" data-i18n="chat.send"><i data-lucide="send"></i></button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Admin View (placeholder) -->
+        <div id="view-admin" class="view">
+          <div style="padding:var(--space-xl);text-align:center;color:var(--robot-text-muted)">
+            <i data-lucide="settings" style="width:64px;height:64px;margin-bottom:var(--space-md)"></i>
+            <h3>管理員面板</h3>
+            <p>開發中...</p>
+          </div>
+        </div>
+
+        <!-- Teacher View (placeholder) -->
+        <div id="view-teacher" class="view">
+          <div style="padding:var(--space-xl);text-align:center;color:var(--robot-text-muted)">
+            <i data-lucide="clipboard-list" style="width:64px;height:64px;margin-bottom:var(--space-md)"></i>
+            <h3>教師面板</h3>
+            <p>開發中...</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- AI Assist Panel -->
+    <aside id="ai-panel" class="ai-panel" role="dialog" aria-label="AI Assistant">
+      <div class="ai-panel-header">
+        <h3 style="font-size:1rem;font-weight:600" data-i18n="aiAssist.title">AI 助手</h3>
+        <div class="ai-panel-tabs">
+          <button class="ai-panel-tab active" data-mode="designer" onclick="switchAiMode(this)"><i data-lucide="pencil-ruler"></i> <span data-i18n="aiAssist.modes.designer">指令設計師</span></button>
+          <button class="ai-panel-tab" data-mode="planner" onclick="switchAiMode(this)"><i data-lucide="list-todo"></i> <span data-i18n="aiAssist.modes.planner">任務規劃師</span></button>
+          <button class="ai-panel-tab" data-mode="debugger" onclick="switchAiMode(this)"><i data-lucide="bug"></i> <span data-i18n="aiAssist.modes.debugger">座標除錯器</span></button>
+          <button class="ai-panel-tab" data-mode="generator" onclick="switchAiMode(this)"><i data-lucide="code"></i> <span data-i18n="aiAssist.modes.generator">代碼生成器</span></button>
+        </div>
+        <button class="btn btn-icon" onclick="toggleAiPanel()" aria-label="Close AI Panel"><i data-lucide="x"></i></button>
+      </div>
+      <div class="ai-panel-body" id="ai-panel-body">
+        <!-- AI Chat Messages -->
+        <div class="ai-chat-messages" id="ai-chat-messages"></div>
+      </div>
+      <div class="ai-panel-footer">
+        <div class="ai-input-area">
+          <textarea id="ai-input" class="input ai-input" placeholder="詢問 AI 關於機械手臂指令..." data-i18n-placeholder="aiAssist.placeholder" rows="1"></textarea>
+          <button class="btn btn-primary" onclick="sendAiMessage()"><i data-lucide="send"></i></button>
+        </div>
+      </div>
+    </aside>
+
+    <!-- Mobile Sidebar Overlay -->
+    <div class="sidebar-overlay" id="sidebar-overlay" onclick="closeSidebar()"></div>
+
+    <!-- Toast Container -->
+    <div class="toast-container" id="toast-container"></div>
+
+    <!-- ===== Modals ===== -->
+    
+    <!-- New Session Modal -->
+    <div id="modal-new-session" class="modal-overlay hidden">
+      <div class="modal">
+        <div class="modal-header">
+          <h3 class="modal-title" data-i18n="session.create">新增工作階段</h3>
+          <button class="modal-close" onclick="closeModal('modal-new-session')" aria-label="Close"><i data-lucide="x"></i></button>
+        </div>
+        <div class="modal-body">
+          <div class="form-group">
+            <label class="form-label" data-i18n="session.name">工作階段名稱</label>
+            <input type="text" id="new-session-name" class="input" placeholder="輸入名稱 (選填)">
+          </div>
+          <div class="form-group">
+            <label class="form-label" data-i18n="session.uploadImage">上傳測試圖片</label>
+            <div class="upload-area" id="upload-area" onclick="document.getElementById('session-image-input').click()">
+              <i data-lucide="upload-cloud"></i>
+              <p data-i18n="robot.vision.uploadPrompt">點擊或拖拽上傳測試圖片</p>
+              <p class="upload-hint" data-i18n="common.uploadHint">支援 JPG, PNG, WebP (最大 5MB)</p>
+            </div>
+            <input type="file" id="session-image-input" class="hidden" accept="image/*" onchange="handleSessionImageSelect(this)">
+            <div id="image-preview-container" class="hidden" style="margin-top:var(--space-md)"></div>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button class="btn btn-secondary" onclick="closeModal('modal-new-session')" data-i18n="common.cancel">取消</button>
+          <button class="btn btn-primary" onclick="createSession()" data-i18n="common.create">建立</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Help Modal -->
+    <div id="modal-help" class="modal-overlay hidden">
+      <div class="modal" style="max-width:600px">
+        <div class="modal-header">
+          <h3 class="modal-title" data-i18n="topbar.help">使用說明</h3>
+          <button class="modal-close" onclick="closeModal('modal-help')" aria-label="Close"><i data-lucide="x"></i></button>
+        </div>
+        <div class="modal-body">
+          <div style="display:flex;flex-direction:column;gap:var(--space-lg)">
+            <section>
+              <h4 style="font-weight:600;margin-bottom:var(--space-sm);display:flex;align-items:center;gap:var(--space-sm)"><i data-lucide="cpu"></i> 基本流程</h4>
+              <ol style="padding-left:var(--space-lg);display:flex;flex-direction:column;gap:var(--space-sm);color:var(--robot-text-secondary);font-size:0.875rem">
+                <li>點擊「新增工作階段」上傳一張測試桌面圖片</li>
+                <li>系統會模擬視覺偵測，標記圖片中的物件並計算 3D 座標</li>
+                <li>在聊天室輸入自然語言指令 (如：「夾起紅色積木放到藍色盒子」)</li>
+                <li>AI 解析指令並生成機械手臂動作序列</li>
+                <li>點擊執行模擬，查看即時日誌並下載指令記錄</li>
+              </ol>
+            </section>
+            <section>
+              <h4 style="font-weight:600;margin-bottom:var(--space-sm);display:flex;align-items:center;gap:var(--space-sm)"><i data-lucide="bot"></i> AI 協助面板</h4>
+              <ul style="padding-left:var(--space-lg);display:flex;flex-direction:column;gap:var(--space-sm);color:var(--robot-text-secondary);font-size:0.875rem">
+                <li><strong>指令設計師</strong>：協助優化自然語言以獲得更好的解析結果</li>
+                <li><strong>任務規劃師</strong>：討論多步驟任務分解策略</li>
+                <li><strong>座標除錯器</strong>：解釋像素到世界座標的轉換過程</li>
+                <li><strong>代碼生成器</strong>：從模擬日誌匯出 Python/ROS 代碼</li>
+              </ul>
+            </section>
+            <section>
+              <h4 style="font-weight:600;margin-bottom:var(--space-sm);display:flex;align-items:center;gap:var(--space-sm)"><i data-lucide="terminal"></i> 標準動作庫</h4>
+              <pre style="background:var(--terminal-bg);color:var(--terminal-text);padding:var(--space-md);border-radius:var(--radius-md);font-size:0.75rem;overflow-x:auto"><code>detect(target_name)  - 視覺偵測物件
+pick(x, y, z)        - 移動至座標並夾取
+place(x, y, z)       - 移動至座標並放置
+reset_home()         - 回到安全初始位置</code></pre>
+            </section>
+            <section>
+              <h4 style="font-weight:600;margin-bottom:var(--space-sm);display:flex;align-items:center;gap:var(--space-sm)"><i data-lucide="info"></i> 關於</h4>
+              <p style="color:var(--robot-text-secondary);font-size:0.875rem">Harmony v0.1.0 - AIEduChat 自然語言機械手臂控制平台測試版<br>技術棧: Vanilla JS + Supabase + Azure OpenAI</p>
+            </section>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button class="btn btn-primary" onclick="closeModal('modal-help')" data-i18n="common.close">關閉</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Notice Modal -->
+    <div id="modal-notice" class="modal-overlay hidden">
+      <div class="modal" style="max-width:600px">
+        <div class="modal-header">
+          <h3 class="modal-title" data-i18n="help.noticeHeading">隱私權與使用條款</h3>
+          <button class="modal-close" onclick="closeModal('modal-notice')" aria-label="Close"><i data-lucide="x"></i></button>
+        </div>
+        <div class="modal-body" style="max-height:60vh;overflow-y:auto">
+          <div style="color:var(--robot-text-secondary);font-size:0.875rem;line-height:1.8">
+            <h4 style="font-weight:600;margin:var(--space-md) 0 var(--space-sm)">資料收集</h4>
+            <p>本平台僅收集運作所需的最少資料：帳號資訊、聊天訊息、上傳圖片、模擬日誌。</p>
+            <h4 style="font-weight:600;margin:var(--space-md) 0 var(--space-sm)">AI 處理</h4>
+            <p>自然語言指令會傳送至 Azure OpenAI / GitHub Models 進行解析，不包含個人身分資訊。</p>
+            <h4 style="font-weight:600;margin:var(--space-md) 0 var(--space-sm)">資料儲存</h4>
+            <p>所有資料儲存於 Supabase (PostgreSQL)，您可隨時要求刪除帳號與資料。</p>
+            <h4 style="font-weight:600;margin:var(--space-md) 0 var(--space-sm)">教育用途</h4>
+            <p>本平台專為教育測試設計，非生產級機器人控制系統。模擬結果僅供學習參考。</p>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button class="btn btn-primary" onclick="closeModal('modal-notice')" data-i18n="common.close">關閉</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- About Modal -->
+    <div id="modal-about" class="modal-overlay hidden">
+      <div class="modal">
+        <div class="modal-header">
+          <h3 class="modal-title" data-i18n="about.btn">關於 Harmony</h3>
+          <button class="modal-close" onclick="closeModal('modal-about')" aria-label="Close"><i data-lucide="x"></i></button>
+        </div>
+        <div class="modal-body" style="text-align:center">
+          <div class="brand-robot" style="margin:0 auto var(--space-md)" aria-hidden="true">
+            <svg viewBox="0 0 100 100" fill="none"><rect x="10" y="10" width="80" height="80" rx="15" fill="#0066cc"/><path d="M30 50 L50 30 L70 50 M50 30 L50 70" stroke="#fff" stroke-width="6" stroke-linecap="round" stroke-linejoin="round" fill="none"/><circle cx="50" cy="50" r="12" fill="#ff6b00"/></svg>
+          </div>
+          <h3 style="font-size:1.5rem;font-weight:700;margin-bottom:var(--space-xs)">Harmony</h3>
+          <p style="color:var(--robot-text-muted);margin-bottom:var(--space-lg)">AIEduChat 自然語言機械手臂控制平台</p>
+          <div style="display:flex;justify-content:center;gap:var(--space-lg);font-size:0.8125rem;color:var(--robot-text-secondary);flex-wrap:wrap">
+            <div><strong>版本</strong><br>v0.1.0</div>
+            <div><strong>建置日期</strong><br>2026-09-10</div>
+            <div><strong>模式</strong><br>測試版 MVP</div>
+          </div>
+          <hr style="margin:var(--space-lg) 0;border-color:var(--robot-border)">
+          <p style="font-size:0.75rem;color:var(--robot-text-muted)">技術棧: Vanilla HTML/CSS/JS + Supabase + Azure OpenAI</p>
+          <p style="font-size:0.75rem;color:var(--robot-text-muted)">部署: Vercel (自動部署)</p>
+        </div>
+        <div class="modal-footer">
+          <button class="btn btn-primary" onclick="closeModal('modal-about')" data-i18n="common.close">關閉</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Image Upload Input (hidden, for chat) -->
+    <input type="file" id="chat-image-input" class="hidden" accept="image/*" onchange="handleChatImageSelect(this)">
+  </div>
+</body>
+</html>

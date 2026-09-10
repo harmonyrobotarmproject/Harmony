@@ -1,0 +1,10 @@
+# Supabase CLI Configuration
+project_id = "your-project-ref"
+
+[functions.ai-proxy]
+verify_jwt = true
+import_map = "./import_map.json"
+
+[functions.robot-commands]
+verify_jwt = true
+import_map = "./import_map.json"

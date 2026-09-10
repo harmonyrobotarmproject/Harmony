@@ -1,0 +1,16 @@
+// ===== Harmony Local Configuration Example =====
+// 複製此檔案為 config.local.js 並填入您的設定
+// 此檔案已在 .gitignore 中，不會被上傳到 Git
+
+// GitHub Personal Access Token (用於 GitHub Models fallback)
+// 格式: ghp_xxxxxxxxxxxx 或 github_pat_xxxxxxxxxxxx
+// 在 GitHub Settings > Developer settings > Personal access tokens 建立
+// 需要 repo 權限
+window.LOCAL_GITHUB_TOKEN = 'ghp_your_token_here';
+
+// 本機測試用的 Supabase 設定 (可選，覆蓋 config.js)
+// window.SUPABASE_URL = 'https://your-local-ref.supabase.co';
+// window.SUPABASE_ANON_KEY = 'your-local-anon-key';
+
+// 本機除錯旗標
+window.LOCAL_DEBUG = true;
