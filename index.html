@@ -22,7 +22,7 @@
           el = document.createElement('div');
           el.id = 'js-error-banner';
           el.style.cssText = 'position:fixed;top:0;left:0;right:0;z-index:99999;background:#dc2626;color:#fff;padding:12px 16px;font:13px/1.4 monospace;word-break:break-all;max-height:40vh;overflow:auto;box-shadow:0 2px 8px rgba(0,0,0,.4)';
-          document.body.appendChild(el);
+          (document.body || document.documentElement).appendChild(el);
         }
         el.textContent = _errs.join('\n---\n');
       }
@@ -42,8 +42,8 @@
   <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&family=Noto+Sans+TC:wght@400;500;700;900&display=swap" rel="stylesheet">
 
   <!-- Styles -->
-  <link rel="stylesheet" href="styles/main.css?v=20260910a">
-  <link rel="stylesheet" href="styles/harmony-theme.css?v=20260910a">
+  <link rel="stylesheet" href="styles/main.css?v=20260910b">
+  <link rel="stylesheet" href="styles/harmony-theme.css?v=20260910b">
 
   <!-- External Libraries -->
   <script src="https://unpkg.com/lucide@0.469.0"></script>

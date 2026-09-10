@@ -230,7 +230,7 @@ const robotLogger = {
     code += `ROBOT_BASE_FRAME = "base_link"\n`;
     code += `GRIPPER_FRAME = "gripper_link"\n\n`;
     
-    # Define detected object positions
+    // Define detected object positions
     code += `# Detected object positions (meters)\n`;
     parsedLog.objects.forEach(obj => {
       code += `OBJ_${obj.name.toUpperCase().replace(/\s+/g, '_')} = np.array([${obj.world[0].toFixed(4)}, ${obj.world[1].toFixed(4)}, ${obj.world[2].toFixed(4)}])\n`;
