@@ -42,8 +42,8 @@
   <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&family=Noto+Sans+TC:wght@400;500;700;900&display=swap" rel="stylesheet">
 
   <!-- Styles -->
-  <link rel="stylesheet" href="styles/main.css?v=20260911c">
-  <link rel="stylesheet" href="styles/harmony-theme.css?v=20260911c">
+  <link rel="stylesheet" href="styles/main.css?v=20260911d">
+  <link rel="stylesheet" href="styles/harmony-theme.css?v=20260911d">
 
   <!-- External Libraries -->
   <script src="https://unpkg.com/lucide@0.469.0"></script>
@@ -83,7 +83,7 @@
         lucide.createIcons();
       }
       // Show version
-      document.getElementById('app-version').textContent = window.APP_VERSION || 'v0.1.5';
+      document.getElementById('app-version').textContent = window.APP_VERSION || 'v0.1.6';
       // Start app
       if (typeof initApp === 'function') {
         initApp();
@@ -361,6 +361,11 @@
               <p data-i18n="robot.vision.uploadPrompt">點擊或拖拽上傳測試圖片</p>
               <p class="upload-hint" data-i18n="common.uploadHint">支援 JPG, PNG, WebP (最大 5MB)</p>
             </div>
+            <!-- Demo 模式提示 -->
+            <div id="demo-mode-hint" class="hidden" style="margin-top:var(--space-sm);padding:var(--space-sm);background:var(--robot-warning-bg);border:1px solid var(--robot-warning-border);border-radius:var(--radius-md);font-size:0.875rem;color:var(--robot-warning-text)">
+              <i data-lucide="cpu" style="width:16px;height:16px;vertical-align:middle;margin-right:var(--space-xs)"></i>
+              <span>Demo 模式啟用中：將自動使用 6 個預設模擬物件，<strong>無需上傳圖片</strong></span>
+            </div>
             <input type="file" id="session-image-input" class="hidden" accept="image/*" onchange="handleSessionImageSelect(this)">
             <div id="image-preview-container" class="hidden" style="margin-top:var(--space-md)"></div>
           </div>
@@ -409,7 +414,7 @@ reset_home()         - 回到安全初始位置</code></pre>
             </section>
             <section>
               <h4 style="font-weight:600;margin-bottom:var(--space-sm);display:flex;align-items:center;gap:var(--space-sm)"><i data-lucide="info"></i> 關於</h4>
-              <p style="color:var(--robot-text-secondary);font-size:0.875rem">Harmony <span id="about-version">v0.1.5</span> - AIEduChat 自然語言機械手臂控制平台測試版<br>技術棧: Vanilla JS + Supabase + Azure OpenAI</p>
+              <p style="color:var(--robot-text-secondary);font-size:0.875rem">Harmony <span id="about-version">v0.1.6</span> - AIEduChat 自然語言機械手臂控制平台測試版<br>技術棧: Vanilla JS + Supabase + Azure OpenAI</p>
             </section>
           </div>
         </div>
@@ -458,7 +463,7 @@ reset_home()         - 回到安全初始位置</code></pre>
           <h3 style="font-size:1.5rem;font-weight:700;margin-bottom:var(--space-xs)">Harmony</h3>
           <p style="color:var(--robot-text-muted);margin-bottom:var(--space-lg)">AIEduChat 自然語言機械手臂控制平台</p>
           <div style="display:flex;justify-content:center;gap:var(--space-lg);font-size:0.8125rem;color:var(--robot-text-secondary);flex-wrap:wrap">
-            <div><strong>版本</strong><br><span id="about-version-modal">v0.1.5</span></div>
+            <div><strong>版本</strong><br><span id="about-version-modal">v0.1.6</span></div>
             <div><strong>建置日期</strong><br>2026-09-11</div>
             <div><strong>模式</strong><br>測試版 MVP</div>
           </div>

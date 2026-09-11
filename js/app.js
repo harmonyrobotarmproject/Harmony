@@ -228,7 +228,9 @@ async function createSession() {
   const name = document.getElementById('new-session-name').value.trim();
   const imageInput = document.getElementById('session-image-input');
   
-  if (!imageInput.files[0]) {
+  const isDemo = window.HARMONY_DEMO_MODE === true || localStorage.getItem('harmony_demo_mode') === '1';
+  
+  if (!isDemo && !imageInput.files[0]) {
     showToast('請上傳測試圖片', 'warning');
     return;
   }
@@ -236,17 +238,21 @@ async function createSession() {
   const file = imageInput.files[0];
   const sessionName = name || `Session ${new Date().toLocaleString()}`;
   
-  // 上傳圖片
-  const timestamp = Date.now();
-  const path = `${currentUser.id}/${timestamp}_${file.name}`;
-  const { data: uploadData, error: uploadError } = await db.uploadImage('robot-images', path, file);
+  let imageUrl = null;
   
-  if (uploadError) {
-    showToast('圖片上傳失敗: ' + uploadError.message, 'error');
-    return;
+  if (!isDemo && file) {
+    // 上傳圖片 (非 Demo 模式)
+    const timestamp = Date.now();
+    const path = `${currentUser.id}/${timestamp}_${file.name}`;
+    const { data: uploadData, error: uploadError } = await db.uploadImage('robot-images', path, file);
+    
+    if (uploadError) {
+      showToast('圖片上傳失敗: ' + uploadError.message, 'error');
+      return;
+    }
+    
+    imageUrl = db.getImageUrl('robot-images', path);
   }
-  
-  const imageUrl = db.getImageUrl('robot-images', path);
   
   // 建立工作階段
   const { data: session, error } = await db.createSession({
@@ -261,9 +267,64 @@ async function createSession() {
     return;
   }
   
+  // Demo 模式：自動填入模擬偵測物件
+  if (isDemo) {
+    await populateDemoObjects(session.id);
+  }
+  
   closeModal('modal-new-session');
   loadSessions();
   showToast(t('notification.sessionCreated'), 'success');
+}
+
+// Demo 模式：自動填入模擬偵測物件 (不需上傳圖片)
+async function populateDemoObjects(sessionId) {
+  const mockObjects = ROBOT_VISION_CONFIG?.mockObjects;
+  if (!mockObjects) return;
+  
+  const objects = Object.keys(mockObjects).map(name => {
+    const mock = mockObjects[name];
+    const pixel = [mock.u, mock.v];
+    const world = aiTransport.pixelToWorld(mock.u, mock.v);
+    return {
+      name,
+      pixel,
+      world,
+      confidence: 0.95,
+      color: mock.color,
+      bbox: robotVision.calculateBbox(mock.u, mock.v)
+    };
+  });
+  
+  // 存入資料庫
+  for (const obj of objects) {
+    try {
+      await db.createRobotObject({
+        session_id: sessionId,
+        name: obj.name,
+        pixel_u: obj.pixel[0],
+        pixel_v: obj.pixel[1],
+        world_x: obj.world[0],
+        world_y: obj.world[1],
+        world_z: obj.world[2],
+        confidence: obj.confidence,
+        color: obj.color,
+        bbox_x1: obj.bbox.x1,
+        bbox_y1: obj.bbox.y1,
+        bbox_x2: obj.bbox.x2,
+        bbox_y2: obj.bbox.y2
+      });
+    } catch (err) {
+      console.error('Failed to save demo object:', err);
+    }
+  }
+  
+  // 更新模擬器狀態
+  robotSimulator.state.detectedObjects = objects;
+  robotSimulator.state.annotatedImageUrl = robotVision.getAnnotatedImage(objects);
+  renderDetectedObjects();
+  
+  showToast('Demo 模式：已自動產生 6 個模擬偵測物件', 'success');
 }
 
 async function deleteSession(sessionId) {
@@ -319,7 +380,11 @@ function handleSessionImageSelect(input) {
 function clearSessionImage() {
   document.getElementById('session-image-input').value = '';
   document.getElementById('image-preview-container').classList.add('hidden');
-  document.getElementById('upload-area').classList.remove('hidden');
+  
+  const isDemo = window.HARMONY_DEMO_MODE === true || localStorage.getItem('harmony_demo_mode') === '1';
+  if (!isDemo) {
+    document.getElementById('upload-area').classList.remove('hidden');
+  }
 }
 
 function handleImageUpload() {
@@ -742,6 +807,20 @@ function showNewSessionModal() {
   modal.classList.add('open');
   document.getElementById('new-session-name').focus();
   clearSessionImage();
+  
+  // Demo 模式提示顯示/隱藏
+  const demoHint = document.getElementById('demo-mode-hint');
+  const uploadArea = document.getElementById('upload-area');
+  const isDemo = window.HARMONY_DEMO_MODE === true || localStorage.getItem('harmony_demo_mode') === '1';
+  if (demoHint) {
+    if (isDemo) {
+      demoHint.classList.remove('hidden');
+      if (uploadArea) uploadArea.style.display = 'none';
+    } else {
+      demoHint.classList.add('hidden');
+      if (uploadArea) uploadArea.style.display = '';
+    }
+  }
 }
 
 function showModal(modalId) {
@@ -804,6 +883,22 @@ function toggleDemoMode() {
     ? 'Demo 模式已啟用：AI 回應為離線規則生成，不呼叫 API'
     : 'Demo 模式已關閉：恢復使用真實 AI API';
   showToast(msg, isDemo ? 'warning' : 'success');
+  
+  // 如果新增工作階段 modal 開著，更新 Demo 提示
+  const newSessionModal = document.getElementById('modal-new-session');
+  if (newSessionModal && newSessionModal.classList.contains('open')) {
+    const demoHint = document.getElementById('demo-mode-hint');
+    const uploadArea = document.getElementById('upload-area');
+    if (demoHint) {
+      if (isDemo) {
+        demoHint.classList.remove('hidden');
+        if (uploadArea) uploadArea.style.display = 'none';
+      } else {
+        demoHint.classList.add('hidden');
+        if (uploadArea) uploadArea.style.display = '';
+      }
+    }
+  }
   
   // 如果在 AI 面板，重新載入當前模式提示
   if (document.getElementById('ai-panel').classList.contains('open')) {
@@ -1020,7 +1115,7 @@ function initApp() {
     }
   }, false);
   
-  console.log('Harmony ' + (window.APP_VERSION || 'v0.1.5') + ' initialized');
+  console.log('Harmony ' + (window.APP_VERSION || 'v0.1.6') + ' initialized');
 }
 
 // 全域函數供 HTML 使用
