@@ -1115,7 +1115,7 @@ function initApp() {
     }
   }, false);
   
-  console.log('Harmony ' + (window.APP_VERSION || 'v0.1.8') + ' initialized');
+  console.log('Harmony ' + (window.APP_VERSION || 'v0.1.9') + ' initialized');
 }
 
 // 全域函數供 HTML 使用

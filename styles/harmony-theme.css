@@ -144,6 +144,9 @@
   /* robot-log 訊息內的 code block 需要對比度 (bubble 本身是深色 terminal-bg) */
   .message.robot-log .message-content pre { background: #161b22; border: 1px solid #30363d; }
   .message.robot-log .message-content code { background: #161b22; color: var(--terminal-text); }
+
+  /* 通用修正：所有 <pre><code> 區塊不覆蓋 pre 的深底、繼承淺字 */
+  .message-content pre code { background: transparent; color: inherit; padding: 0; }
 .message-content .coord-value { font-family: 'JetBrains Mono', monospace; font-weight: 500; }
 .message-content .coord-x { color: var(--coord-x); }
 .message-content .coord-y { color: var(--coord-y); }
