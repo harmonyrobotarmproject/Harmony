@@ -693,25 +693,47 @@ function removeAiMessage(id) {
 
 // ===== Modals =====
 function showNewSessionModal() {
-  document.getElementById('modal-new-session').classList.remove('hidden');
+  const modal = document.getElementById('modal-new-session');
+  modal.classList.remove('hidden');
+  modal.classList.add('open');
   document.getElementById('new-session-name').focus();
   clearSessionImage();
 }
 
 function showModal(modalId) {
-  document.getElementById(modalId).classList.remove('hidden');
+  const modal = document.getElementById(modalId);
+  if (modal) {
+    modal.classList.remove('hidden');
+    modal.classList.add('open');
+  }
 }
 
 function closeModal(modalId) {
-  document.getElementById(modalId).classList.add('hidden');
+  const modal = document.getElementById(modalId);
+  if (modal) {
+    modal.classList.add('hidden');
+    modal.classList.remove('open');
+  }
 }
 
 function toggleTopbarMore() {
-  document.getElementById('topbar-more-dropdown').classList.toggle('open');
+  const dropdown = document.getElementById('topbar-more-dropdown');
+  const isOpen = dropdown.classList.toggle('open');
+  if (isOpen) {
+    dropdown.classList.remove('hidden');
+  } else {
+    dropdown.classList.add('hidden');
+  }
 }
 
 function closeTopbarMore() {
-  document.getElementById('topbar-more-dropdown').classList.remove('open');
+  const dropdown = document.getElementById('topbar-more-dropdown');
+  dropdown.classList.add('hidden');
+  dropdown.classList.remove('open');
+}
+
+function hidePauseBanner() {
+  document.getElementById('pause-banner').classList.add('hidden');
 }
 
 // ===== Sidebar (Mobile) =====
@@ -937,6 +959,7 @@ window.showModal = showModal;
 window.closeModal = closeModal;
 window.toggleTopbarMore = toggleTopbarMore;
 window.closeTopbarMore = closeTopbarMore;
+window.hidePauseBanner = hidePauseBanner;
 window.switchView = switchView;
 window.toggleSidebar = toggleSidebar;
 window.closeSidebar = closeSidebar;
