@@ -139,7 +139,11 @@
 .message.self .message-time { color: rgba(255,255,255,0.5); }
 .message-content { word-break: break-word; }
 .message-content pre { background: var(--terminal-bg); color: var(--terminal-text); padding: var(--space-sm); border-radius: var(--radius-sm); overflow-x: auto; font-size: 0.75rem; line-height: 1.6; margin: var(--space-xs) 0; }
-.message-content code { background: var(--robot-bg-secondary); padding: 1px 4px; border-radius: var(--radius-sm); font-size: 0.8125rem; }
+  .message-content code { background: var(--robot-bg-secondary); padding: 1px 4px; border-radius: var(--radius-sm); font-size: 0.8125rem; }
+
+  /* robot-log 訊息內的 code block 需要對比度 (bubble 本身是深色 terminal-bg) */
+  .message.robot-log .message-content pre { background: #161b22; border: 1px solid #30363d; }
+  .message.robot-log .message-content code { background: #161b22; color: var(--terminal-text); }
 .message-content .coord-value { font-family: 'JetBrains Mono', monospace; font-weight: 500; }
 .message-content .coord-x { color: var(--coord-x); }
 .message-content .coord-y { color: var(--coord-y); }
