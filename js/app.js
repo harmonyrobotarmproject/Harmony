@@ -8,16 +8,15 @@
     if (loginForm) {
       loginForm.addEventListener('submit', function (e) {
         e.preventDefault();
-        var errEl = document.getElementById('auth-error');
-        if (errEl && !errEl.textContent) {
-          errEl.style.color = 'var(--text-secondary)';
-          errEl.textContent = 'Loading...';
-        }
+        login();
       });
     }
     var signupForm = document.getElementById('form-signup');
     if (signupForm) {
-      signupForm.addEventListener('submit', function (e) { e.preventDefault(); });
+      signupForm.addEventListener('submit', function (e) {
+        e.preventDefault();
+        signup();
+      });
     }
   });
 })();
@@ -140,15 +139,20 @@ async function loadSessions() {
 
 function renderSessionList(sessions) {
   const container = document.getElementById('session-list');
-  const emptyState = document.getElementById('empty-sessions');
+  if (!container) return;
   
+  const emptyStateHTML = `<div class="empty-state" id="empty-sessions">
+    <i data-lucide="image"></i>
+    <h3 data-i18n="session.noSessions">${t('session.noSessions')}</h3>
+    <p data-i18n="session.noSessionsDesc">${t('session.noSessionsDesc')}</p>
+  </div>`;
+
   if (sessions.length === 0) {
-    container.innerHTML = '';
-    emptyState.classList.remove('hidden');
+    container.innerHTML = emptyStateHTML;
+    if (typeof lucide !== 'undefined') lucide.createIcons({ nodes: [container] });
     return;
   }
   
-  emptyState.classList.add('hidden');
   container.innerHTML = sessions.map(session => `
     <div class="session-item ${currentSessionId === session.id ? 'active' : ''}" 
          onclick="selectSession('${session.id}')">
@@ -916,7 +920,7 @@ function initApp() {
     }
   }, false);
   
-  console.log('Harmony v0.1.0 initialized');
+  console.log('Harmony ' + (window.APP_VERSION || 'v0.1.3') + ' initialized');
 }
 
 // 全域函數供 HTML 使用
