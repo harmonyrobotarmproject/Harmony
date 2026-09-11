@@ -40,8 +40,52 @@ const robotSimulator = {
     }
   },
 
-  // 執行視覺偵測
+// 執行視覺偵測
   async runVision(targetNames = []) {
+    const isDemo = window.HARMONY_DEMO_MODE === true || localStorage.getItem('harmony_demo_mode') === '1';
+
+    // Demo 模式：直接用 mockObjects 產生偵測結果，不需真實圖片
+    if (isDemo && !robotVision.currentImage) {
+      this.updateUIState('detecting');
+
+      try {
+        // 從 ROBOT_VISION_CONFIG.mockObjects 產生模擬偵測
+        const config = ROBOT_VISION_CONFIG;
+        const objectsToDetect = targetNames.length > 0 ? targetNames : Object.keys(config.mockObjects);
+        const detections = [];
+
+        for (const name of objectsToDetect) {
+          const mock = config.mockObjects[name];
+          if (!mock) continue;
+
+          await robotVision.sleep(80); // 模擬偵測延遲
+
+          const pixelCoords = [mock.u, mock.v];
+          const worldCoords = robotVision.pixelToWorld(pixelCoords[0], pixelCoords[1]);
+
+          detections.push({
+            name,
+            pixel: pixelCoords,
+            world: worldCoords,
+            confidence: 0.95,
+            color: mock.color,
+            bbox: robotVision.calculateBbox(mock.u, mock.v)
+          });
+        }
+
+        this.state.detectedObjects = detections;
+        this.state.annotatedImageUrl = robotVision.getAnnotatedImage(detections);
+        await this.saveObjectsToDB(detections);
+        this.updateUIState('detected');
+
+        return detections;
+      } catch (err) {
+        this.updateUIState('error');
+        throw err;
+      }
+    }
+
+    // 正式模式：需有真實圖片
     if (!robotVision.currentImage) {
       throw new Error('No image loaded. Please upload an image first.');
     }
@@ -52,16 +96,16 @@ const robotSimulator = {
     try {
       const detections = await robotVision.detectObjects(targetNames);
       this.state.detectedObjects = detections;
-      
+
       // 產生標記後的圖片
       this.state.annotatedImageUrl = robotVision.getAnnotatedImage(detections);
-      
+
       // 儲存到資料庫
       await this.saveObjectsToDB(detections);
-      
+
       // 更新 UI
       this.updateUIState('detected');
-      
+
       return detections;
     } catch (err) {
       this.updateUIState('error');

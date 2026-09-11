@@ -41,7 +41,7 @@ window.AI_CONFIG_DEFAULTS = {
 };
 
 // 應用版本 (用於 cache-busting)
-window.APP_VERSION = 'v0.1.6_20260911';
+window.APP_VERSION = 'v0.1.7_20260911';
 
 // 除錯模式
 window.DEBUG_ENABLED = true;

@@ -118,35 +118,113 @@ const robotVision = {
     };
   },
 
-  // 在 Canvas 上繪製偵測結果
+  // 繪製合成「桌面俯視」背景 (Demo 模式 / 無真實圖片時)
+  drawSyntheticBackground(detections) {
+    const config = ROBOT_VISION_CONFIG;
+    const w = config.imageWidth;
+    const h = config.imageHeight;
+    const ctx = this.ctx;
+
+    // 背景漸層 (模擬桌面材質)
+    const grad = ctx.createLinearGradient(0, 0, 0, h);
+    grad.addColorStop(0, '#3a3f47');
+    grad.addColorStop(0.5, '#2f343c');
+    grad.addColorStop(1, '#252930');
+    ctx.fillStyle = grad;
+    ctx.fillRect(0, 0, w, h);
+
+    // 輕微網格線 (給深度感)
+    ctx.strokeStyle = 'rgba(255,255,255,0.04)';
+    ctx.lineWidth = 1;
+    for (let x = 0; x <= w; x += 40) {
+      ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, h); ctx.stroke();
+    }
+    for (let y = 0; y <= h; y += 40) {
+      ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(w, y); ctx.stroke();
+    }
+
+    // 畫出每個物件的「實心形狀」 (模擬 webcam 真的看到的物體)
+    detections.forEach(det => {
+      const { pixel, color, bbox } = det;
+      const cx = pixel[0];
+      const cy = pixel[1];
+      const r = Math.max(12, Math.min((bbox.x2 - bbox.x1) / 2, (bbox.y2 - bbox.y1) / 2));
+
+      // 物體陰影 (偏移 3px)
+      ctx.beginPath();
+      ctx.arc(cx + 3, cy + 3, r, 0, Math.PI * 2);
+      ctx.fillStyle = 'rgba(0,0,0,0.35)';
+      ctx.fill();
+
+      // 物體主體 (依 color 填色)
+      ctx.beginPath();
+      ctx.arc(cx, cy, r, 0, Math.PI * 2);
+      const g = ctx.createRadialGradient(cx - r * 0.3, cy - r * 0.3, r * 0.1, cx, cy, r);
+      g.addColorStop(0, this.lightenColor(color, 40));
+      g.addColorStop(1, color);
+      ctx.fillStyle = g;
+      ctx.fill();
+
+      // 高光
+      ctx.beginPath();
+      ctx.arc(cx - r * 0.25, cy - r * 0.25, r * 0.25, 0, Math.PI * 2);
+      ctx.fillStyle = 'rgba(255,255,255,0.25)';
+      ctx.fill();
+    });
+  },
+
+  // 輔助：把 hex color 變亮
+  lightenColor(hex, percent) {
+    const num = parseInt(hex.replace('#', ''), 16);
+    const r = Math.min(255, (num >> 16) + percent);
+    const g = Math.min(255, ((num >> 8) & 0x00FF) + percent);
+    const b = Math.min(255, (num & 0x0000FF) + percent);
+    return `rgb(${r},${g},${b})`;
+  },
+
+  // 在 Canvas 上繪製偵測結果 (支援無 currentImage 的合成模式)
   drawDetections(detections) {
-    if (!this.ctx || !this.currentImage) return;
+    // 確保 canvas / ctx 存在
+    if (!this.canvas) this.initCanvas();
 
-    // 重繪原圖
-    this.ctx.drawImage(this.currentImage, 0, 0);
+    const config = ROBOT_VISION_CONFIG;
+    const hasImage = !!this.currentImage;
 
+    if (hasImage) {
+      // 真實圖片模式：canvas 依圖片尺寸
+      this.canvas.width = this.currentImage.width;
+      this.canvas.height = this.currentImage.height;
+      this.ctx.drawImage(this.currentImage, 0, 0);
+    } else {
+      // Demo / 合成模式：固定 config 尺寸
+      this.canvas.width = config.imageWidth;
+      this.canvas.height = config.imageHeight;
+      this.drawSyntheticBackground(detections);
+    }
+
+    // 疊加偵測框、標籤、中心點
     detections.forEach(det => {
       const { bbox, name, color, confidence, pixel } = det;
       const width = bbox.x2 - bbox.x1;
       const height = bbox.y2 - bbox.y1;
 
-      // 繪製邊界框
+      // 邊界框
       this.ctx.strokeStyle = color;
       this.ctx.lineWidth = 3;
       this.ctx.strokeRect(bbox.x1, bbox.y1, width, height);
 
-      // 繪製標籤背景
+      // 標籤背景
       this.ctx.fillStyle = color;
       const label = `${name} ${(confidence * 100).toFixed(0)}%`;
       const textMetrics = this.ctx.measureText(label);
       this.ctx.fillRect(bbox.x1, bbox.y1 - 24, textMetrics.width + 10, 24);
 
-      // 繪製標籤文字
+      // 標籤文字
       this.ctx.fillStyle = '#fff';
       this.ctx.font = '14px JetBrains Mono, monospace';
       this.ctx.fillText(label, bbox.x1 + 5, bbox.y1 - 6);
 
-      // 繪製中心點
+      // 中心點
       this.ctx.beginPath();
       this.ctx.arc(pixel[0], pixel[1], 5, 0, Math.PI * 2);
       this.ctx.fillStyle = color;
@@ -159,10 +237,9 @@ const robotVision = {
     return this.canvas.toDataURL('image/png');
   },
 
-  // 取得帶有偵測標記的圖片
+  // 取得帶有偵測標記的圖片 (統一回傳 dataURL，自動處理有無圖片)
   getAnnotatedImage(detections) {
-    this.drawDetections(detections);
-    return this.canvas.toDataURL('image/png');
+    return this.drawDetections(detections);
   },
 
   // 睡眠工具
