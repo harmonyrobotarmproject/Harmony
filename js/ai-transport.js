@@ -1,7 +1,13 @@
 // ===== Harmony AI Transport Layer =====
 // AI 呼叫傳輸層，透過 Supabase Edge Function (ai-proxy) 代理呼叫
+// Demo 模式：不呼叫 API，使用規則式解析器回傳假回應
 
 const aiTransport = {
+  // 檢查是否為 Demo 模式
+  isDemoMode() {
+    return window.HARMONY_DEMO_MODE === true || localStorage.getItem('harmony_demo_mode') === '1';
+  },
+
   // 呼叫 AI Proxy (主要路徑：Azure OpenAI)
   async callAiViaProxy(messages, options = {}) {
     const provider = options.provider || AI_CONFIG_DEFAULTS.provider;
@@ -93,8 +99,171 @@ const aiTransport = {
     localStorage.removeItem('harmony_github_token');
   },
 
+  // ===== Demo 模式：規則式指令解析 =====
+  demoParseRobotCommand(userInput, detectedObjects = [], sessionContext = {}) {
+    const input = userInput.toLowerCase();
+    const rules = DEMO_CONFIG.actionRules;
+    const actions = [];
+    const usedObjects = new Set();
+
+    // 從偵測物件或 mockObjects 取得可用物件
+    const availableObjects = detectedObjects.length > 0 
+      ? detectedObjects 
+      : Object.keys(ROBOT_VISION_CONFIG.mockObjects).map(name => {
+          const mock = ROBOT_VISION_CONFIG.mockObjects[name];
+          return {
+            name,
+            pixel: [mock.u, mock.v],
+            world: this.pixelToWorld(mock.u, mock.v),
+            confidence: 0.95,
+            color: mock.color
+          };
+        });
+
+    // 建立物件名稱查找表 (支援部分比對)
+    const objectMap = {};
+    availableObjects.forEach(obj => {
+      objectMap[obj.name] = obj;
+      // 也加入常見別名
+      if (obj.name.includes('紅色')) objectMap['紅色積木'] = obj;
+      if (obj.name.includes('藍色')) objectMap['藍色盒子'] = obj;
+      if (obj.name.includes('綠色')) objectMap['綠色球'] = obj;
+      if (obj.name.includes('黃色')) objectMap['黃色立方體'] = obj;
+      if (obj.name.includes('蘋果')) objectMap['蘋果'] = obj;
+    });
+
+    // 1. 偵測：找出輸入中提到的所有物件
+    const mentionedObjects = [];
+    for (const [name, obj] of Object.entries(objectMap)) {
+      if (input.includes(name.toLowerCase()) && !usedObjects.has(name)) {
+        mentionedObjects.push(obj);
+        usedObjects.add(name);
+      }
+    }
+
+    // 如果沒有明確提到物件，但有偵測關鍵字，偵測所有可用物件
+    const hasDetectKeyword = rules.detect.some(k => input.includes(k));
+    if (hasDetectKeyword && mentionedObjects.length === 0 && availableObjects.length > 0) {
+      mentionedObjects.push(...availableObjects.slice(0, 3)); // 最多偵測 3 個
+    }
+
+    // 產生 detect 動作
+    mentionedObjects.forEach(obj => {
+      actions.push({
+        action: 'detect',
+        params: { target_name: obj.name },
+        description: `偵測 ${obj.name} 位置`
+      });
+    });
+
+    // 2. 夾取：如果有 pick 關鍵字
+    const hasPickKeyword = rules.pick.some(k => input.includes(k));
+    if (hasPickKeyword) {
+      // 找出被夾取的目標物件
+      let pickTarget = mentionedObjects.find(o => input.includes(o.name.toLowerCase()));
+      if (!pickTarget && mentionedObjects.length > 0) pickTarget = mentionedObjects[0];
+      if (!pickTarget && availableObjects.length > 0) pickTarget = availableObjects[0];
+
+      if (pickTarget) {
+        const coords = pickTarget.world;
+        actions.push({
+          action: 'pick',
+          params: { x: coords[0], y: coords[1], z: coords[2], target_name: pickTarget.name },
+          description: `夾取 ${pickTarget.name}`
+        });
+      }
+    }
+
+    // 3. 放置：如果有 place 關鍵字
+    const hasPlaceKeyword = rules.place.some(k => input.includes(k));
+    if (hasPlaceKeyword) {
+      // 找出放置目標 (不同於夾取目標)
+      let placeTarget = mentionedObjects.find(o => o.name !== pickTarget?.name && input.includes(o.name.toLowerCase()));
+      if (!placeTarget && mentionedObjects.length > 1) placeTarget = mentionedObjects.find(o => o.name !== pickTarget?.name);
+      if (!placeTarget && availableObjects.length > 1) {
+        placeTarget = availableObjects.find(o => o.name !== pickTarget?.name);
+      }
+      if (!placeTarget && availableObjects.length > 0) {
+        placeTarget = availableObjects[availableObjects.length - 1];
+      }
+
+      if (placeTarget) {
+        const coords = placeTarget.world;
+        actions.push({
+          action: 'place',
+          params: { x: coords[0], y: coords[1], z: coords[2], target_name: placeTarget.name },
+          description: `放置到 ${placeTarget.name}`
+        });
+      }
+    }
+
+    // 4. 歸位：總是加在最後
+    actions.push({
+      action: 'reset_home',
+      params: {},
+      description: '機械手臂復位到安全位置'
+    });
+
+    // 如果完全沒有識別出任何動作，給預設序列
+    if (actions.length === 1) { // 只有 reset_home
+      const firstObj = availableObjects[0];
+      if (firstObj) {
+        actions.unshift(
+          { action: 'detect', params: { target_name: firstObj.name }, description: `偵測 ${firstObj.name} 位置` },
+          { action: 'pick', params: { x: firstObj.world[0], y: firstObj.world[1], z: firstObj.world[2], target_name: firstObj.name }, description: `夾取 ${firstObj.name}` },
+          { action: 'place', params: { x: firstObj.world[0], y: firstObj.world[1], z: firstObj.world[2], target_name: firstObj.name }, description: `放置 ${firstObj.name}` }
+        );
+      }
+    }
+
+    return actions;
+  },
+
+  // ===== Demo 模式：AI 協助罐頭回應 =====
+  demoChatReply(messages, modeHint = '') {
+    const templates = DEMO_CONFIG.chatTemplates[modeHint] || DEMO_CONFIG.chatTemplates.designer;
+    const lastUserMsg = messages.filter(m => m.role === 'user').pop()?.content || '';
+    const detectedNames = robotSimulator?.state?.detectedObjects?.map(o => o.name).join('、') || '紅色積木、藍色盒子';
+    const taskHint = lastUserMsg.slice(0, 30);
+
+    // 根據模式選擇回應策略
+    let reply = templates[Math.floor(Math.random() * templates.length)];
+
+    // 加入情境資訊
+    if (modeHint === 'designer') {
+      reply += `\n\n目前偵測物件：${detectedNames}`;
+      reply += `\n建議指令：「偵測${detectedNames.split('、')[0]}，夾取後放到${detectedNames.split('、')[1] || '目標位置'}」`;
+    } else if (modeHint === 'planner') {
+      reply += `\n\n任務提示：${taskHint}`;
+      reply += `\n目前可用物件：${detectedNames}`;
+    } else if (modeHint === 'debugger') {
+      reply += `\n\n校準參考：1px = ${ROBOT_VISION_CONFIG.pixelToMeter * 100}cm, Z = ${ROBOT_VISION_CONFIG.fixedZHeight}m`;
+    } else if (modeHint === 'generator') {
+      reply += `\n\n請先執行模擬產生日誌，或切換到 LeRobot 分頁生成 CLI 指令。`;
+    } else if (modeHint === 'lerobot') {
+      // LeRobot 模式直接生成代碼
+      const session = robotSimulator?.state?.currentSession;
+      const objects = robotSimulator?.state?.detectedObjects || [];
+      const task = lastUserMsg || session?.name || 'grab object and place';
+      const code = robotLogger.generateLeRobotCode({ task, objects, session });
+      return {
+        choices: [{ message: { content: '```bash\n' + code + '\n```' } }]
+      };
+    }
+
+    return {
+      choices: [{ message: { content: reply } }]
+    };
+  },
+
   // 解析機械手臂指令 (專用函數)
   async parseRobotCommand(userInput, detectedObjects = [], sessionContext = {}) {
+    // Demo 模式：直接回傳規則解析結果
+    if (this.isDemoMode()) {
+      console.log('[Demo Mode] parseRobotCommand:', userInput);
+      return this.demoParseRobotCommand(userInput, detectedObjects, sessionContext);
+    }
+
     const systemPrompt = AI_CONFIG_DEFAULTS.systemPrompt;
     
     // 建立偵測到的物件上下文
@@ -176,8 +345,26 @@ const aiTransport = {
     return action;
   },
 
+  // 像素轉世界座標 (供 demo 使用)
+  pixelToWorld(u, v) {
+    const config = ROBOT_VISION_CONFIG;
+    const cx = config.imageWidth / 2;
+    const cy = config.imageHeight / 2;
+    const x = (u - cx) * config.pixelToMeter;
+    const y = (cy - v) * config.pixelToMeter;
+    const z = config.fixedZHeight;
+    return [x, y, z];
+  },
+
   // AI 協助對話 (通用聊天)
   async chatWithAI(messages, options = {}) {
+    // Demo 模式：回傳罐頭回應
+    if (this.isDemoMode()) {
+      const modeHint = options.modeHint || '';
+      console.log('[Demo Mode] chatWithAI:', modeHint);
+      return this.demoChatReply(messages, modeHint);
+    }
+
     const systemPrompt = options.systemPrompt || '你是 Harmony 機械手臂控制平台的 AI 助手，協助學生設計指令、規劃任務、除錯座標轉換。';
     
     const fullMessages = [

@@ -104,9 +104,12 @@ const render = {
       html += `<div class="log-line ${cls}">${this.escapeHtml(line)}</div>`;
     });
     html += `</div>`;
+    html += `<div class="robot-log-actions" style="margin-top:8px;display:flex;gap:8px;flex-wrap:wrap">`;
     if (msg.metadata?.downloadUrl) {
       html += `<a href="${msg.metadata.downloadUrl}" class="btn btn-sm btn-outline" download><i data-lucide="download"></i> 下載日誌</a>`;
     }
+    html += `<button class="btn btn-sm btn-primary" onclick="showLeRobotCode()"><i data-lucide="cpu"></i> 產出 LeRobot 代碼</button>`;
+    html += `</div>`;
     return html;
   },
 

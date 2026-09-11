@@ -41,7 +41,7 @@ window.AI_CONFIG_DEFAULTS = {
 };
 
 // 應用版本 (用於 cache-busting)
-window.APP_VERSION = 'v0.1.4_20260911';
+window.APP_VERSION = 'v0.1.5_20260911';
 
 // 除錯模式
 window.DEBUG_ENABLED = true;
@@ -63,5 +63,58 @@ window.ROBOT_VISION_CONFIG = {
     '藍色籃子': { u: 200, v: 200, color: '#0000ff' },
     '綠色球': { u: 500, v: 350, color: '#00ff00' },
     '黃色立方體': { u: 300, v: 150, color: '#ffff00' }
+  }
+};
+
+// ===== Demo 模式設定 =====
+window.DEMO_CONFIG = {
+  // Demo 模式開關 (localStorage 優先)
+  enabled: localStorage.getItem('harmony_demo_mode') === '1',
+  // LeRobot 代碼生成預設值
+  lerobot: {
+    followerPort: 'COM5',
+    leaderPort: 'COM6',
+    followerId: 'my_awesome_follower_arm',
+    leaderId: 'my_awesome_leader_arm',
+    datasetEpisodes: 30,
+    datasetFps: 30,
+    trainSteps: 300000,
+    trainBatchSize: 8,
+    saveFreq: 5000
+  },
+  // 規則式指令解析關鍵字對應
+  actionRules: {
+    detect: ['偵測', '檢測', '找', '看', '辨識', '識別'],
+    pick: ['夾', '取', '抓', '拿', '拾', 'pick', 'grab'],
+    place: ['放', '置', '放下', '放到', '放在', 'place', 'put', 'drop'],
+    reset_home: ['歸位', '復位', '回家', '重置', 'reset', 'home']
+  },
+  // Demo 模式 AI 協助罐頭回應
+  chatTemplates: {
+    designer: [
+      '建議使用標準動作：detect(物件名稱) → pick(x,y,z) → place(x,y,z) → reset_home()',
+      '請嘗試更精確的指令，例如：「偵測紅色積木，夾取後放到藍色盒子」',
+      '記得先偵測物件位置，再執行夾取動作，這樣座標才會準確。'
+    ],
+    planner: [
+      '複雜任務建議分解為：1) 偵測所有物件 2) 規劃夾取順序 3) 依序執行 pick/place 4) 歸位',
+      '多步驟任務可考慮加入中繼點，避免碰撞。',
+      '若有多個相同物件，建議在指令中加入位置描述（如：左邊的紅色積木）。'
+    ],
+    debugger: [
+      '座標轉換公式：worldX = (pixelX - width/2) * pixelToMeter, worldY = (height/2 - pixelY) * pixelToMeter',
+      '固定 Z 高度為 0.05m (桌面)。像素原點在影像中心，X 向右，Y 向上。',
+      '若座標偏移大，請檢查相機校準與 pixelToMeter 設定 (目前 1px = 0.5cm)。'
+    ],
+    generator: [
+      '代碼生成器可從模擬日誌產生 Python 模擬代碼或 LeRobot CLI 指令。',
+      'LeRobot 指令包含：校正 → 遙操作測試 → 錄製資料集 → 訓練 ACT 策略。',
+      '請先執行模擬產生日誌，再使用代碼生成器。'
+    ],
+    lerobot: [
+      'LeRobot 代碼生成器：將輸出完整的 SO-101 校正、遙操作、錄製、訓練指令。',
+      '請在輸入框描述任務（如：grab red cube and drop in blue box），再按 Enter 生成。',
+      '生成的指令已帶入偵測物件座標與任務描述，僅需調整 COM 埠即可使用。'
+    ]
   }
 };

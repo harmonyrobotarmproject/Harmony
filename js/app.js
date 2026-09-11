@@ -569,7 +569,8 @@ function loadAiMode(mode) {
     designer: { title: '指令設計師', desc: '協助優化自然語言指令', placeholder: '請描述您想讓機械手臂做什麼...' },
     planner: { title: '任務規劃師', desc: '協助分解複雜任務為可執行步驟', placeholder: '描述完整任務目標...' },
     debugger: { title: '座標除錯器', desc: '解釋像素到世界座標的轉換', placeholder: '詢問座標轉換相關問題...' },
-    generator: { title: '代碼生成器', desc: '從模擬日誌生成 Python/ROS 代碼', placeholder: '請求生成特定格式代碼...' }
+    generator: { title: '代碼生成器', desc: '從模擬日誌生成 Python/ROS 代碼', placeholder: '請求生成特定格式代碼...' },
+    lerobot: { title: 'LeRobot 代碼生成器', desc: '生成 SO-101 校正、遙操作、錄製、訓練 CLI 指令', placeholder: '輸入任務描述（如：grab red cube and drop in blue box）' }
   };
   
   const info = modeInfo[mode] || modeInfo.designer;
@@ -645,6 +646,15 @@ async function sendAiMessage() {
           response = { choices: [{ message: { content: '尚無模擬日誌可生成代碼。請先執行模擬。' } }] };
         }
         break;
+      case 'lerobot':
+        if (context.session) {
+          const task = text || context.session.name || 'grab object and place';
+          const code = robotLogger.generateLeRobotCode({ task, objects: context.objects, session: context.session });
+          response = { choices: [{ message: { content: '```bash\n' + code + '\n```' } }] };
+        } else {
+          response = { choices: [{ message: { content: '請先建立或選擇工作階段，再生成 LeRobot 代碼。' } }] };
+        }
+        break;
       default:
         response = await aiTransport.chatWithAI([
           { role: 'user', content: text }
@@ -663,6 +673,40 @@ async function sendAiMessage() {
     appendAiMessage('發生錯誤: ' + err.message, 'ai');
   }
 }
+
+// ===== LeRobot Code Generation =====
+function showLeRobotCode() {
+  const context = {
+    session: robotSimulator.state.currentSession,
+    objects: robotSimulator.state.detectedObjects,
+    actions: robotSimulator.state.parsedActions,
+    log: robotSimulator.state.simulationLog
+  };
+  
+  if (!context.session) {
+    showToast('請先建立或選擇工作階段', 'warning');
+    return;
+  }
+  
+  const task = context.session.name || 'grab object and place';
+  const code = robotLogger.generateLeRobotCode({ task, objects: context.objects, session: context.session });
+  
+  // 在聊天區顯示
+  const logMsg = {
+    id: 'lerobot-' + Date.now(),
+    user_id: 'system',
+    sender_name: 'LeRobot 代碼生成器',
+    message_type: 'robot_log',
+    content: '```bash\n' + code + '\n```',
+    metadata: { downloadUrl: null },
+    created_at: new Date().toISOString()
+  };
+  render.appendMessage(document.getElementById('message-area'), logMsg, currentUser.id);
+  showToast('LeRobot 代碼已生成', 'success');
+}
+
+// 也提供給 AI Assist 面板用
+window.showLeRobotCode = showLeRobotCode;
 
 function appendAiMessage(content, role, id = null) {
   const container = document.getElementById('ai-chat-messages');
@@ -734,6 +778,37 @@ function closeTopbarMore() {
 
 function hidePauseBanner() {
   document.getElementById('pause-banner').classList.add('hidden');
+}
+
+// ===== Demo Mode =====
+function updateDemoBadge() {
+  const badge = document.getElementById('demo-badge');
+  if (badge) {
+    const isDemo = window.HARMONY_DEMO_MODE === true || localStorage.getItem('harmony_demo_mode') === '1';
+    if (isDemo) {
+      badge.classList.remove('hidden');
+      badge.textContent = 'DEMO';
+    } else {
+      badge.classList.add('hidden');
+    }
+  }
+}
+
+function toggleDemoMode() {
+  const isDemo = !(window.HARMONY_DEMO_MODE === true || localStorage.getItem('harmony_demo_mode') === '1');
+  window.HARMONY_DEMO_MODE = isDemo;
+  localStorage.setItem('harmony_demo_mode', isDemo ? '1' : '0');
+  updateDemoBadge();
+  
+  const msg = isDemo 
+    ? 'Demo 模式已啟用：AI 回應為離線規則生成，不呼叫 API'
+    : 'Demo 模式已關閉：恢復使用真實 AI API';
+  showToast(msg, isDemo ? 'warning' : 'success');
+  
+  // 如果在 AI 面板，重新載入當前模式提示
+  if (document.getElementById('ai-panel').classList.contains('open')) {
+    loadAiMode(currentAiMode);
+  }
 }
 
 // ===== Sidebar (Mobile) =====
@@ -877,6 +952,9 @@ function downloadCurrentLog() {
 
 // ===== App Init =====
 function initApp() {
+  // Demo 模式徽章初始化
+  updateDemoBadge();
+  
   // 語言切換事件
   window.addEventListener('languagechange', () => {
     // 重新渲染動態內容
@@ -942,7 +1020,7 @@ function initApp() {
     }
   }, false);
   
-  console.log('Harmony ' + (window.APP_VERSION || 'v0.1.3') + ' initialized');
+  console.log('Harmony ' + (window.APP_VERSION || 'v0.1.5') + ' initialized');
 }
 
 // 全域函數供 HTML 使用
@@ -960,6 +1038,8 @@ window.closeModal = closeModal;
 window.toggleTopbarMore = toggleTopbarMore;
 window.closeTopbarMore = closeTopbarMore;
 window.hidePauseBanner = hidePauseBanner;
+window.toggleDemoMode = toggleDemoMode;
+window.showLeRobotCode = showLeRobotCode;
 window.switchView = switchView;
 window.toggleSidebar = toggleSidebar;
 window.closeSidebar = closeSidebar;

@@ -42,8 +42,8 @@
   <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&family=Noto+Sans+TC:wght@400;500;700;900&display=swap" rel="stylesheet">
 
   <!-- Styles -->
-  <link rel="stylesheet" href="styles/main.css?v=20260911b">
-  <link rel="stylesheet" href="styles/harmony-theme.css?v=20260911b">
+  <link rel="stylesheet" href="styles/main.css?v=20260911c">
+  <link rel="stylesheet" href="styles/harmony-theme.css?v=20260911c">
 
   <!-- External Libraries -->
   <script src="https://unpkg.com/lucide@0.469.0"></script>
@@ -83,7 +83,7 @@
         lucide.createIcons();
       }
       // Show version
-      document.getElementById('app-version').textContent = window.APP_VERSION || 'v0.1.3';
+      document.getElementById('app-version').textContent = window.APP_VERSION || 'v0.1.5';
       // Start app
       if (typeof initApp === 'function') {
         initApp();
@@ -204,6 +204,10 @@
           <span id="user-role-badge" class="badge badge-neutral hidden"></span>
         </span>
 
+        <!-- Demo 模式徽章與開關 -->
+        <span id="demo-badge" class="demo-badge hidden" style="font-size:0.65rem;font-weight:700;padding:2px 6px;border-radius:var(--radius-full);background:var(--robot-warning);color:#fff;margin-right:var(--space-sm);white-space:nowrap"></span>
+        <button id="btn-demo-toggle" class="btn btn-icon topbar-more-desktop" onclick="toggleDemoMode()" aria-label="Toggle Demo Mode" title="Demo 模式"><i data-lucide="cpu"></i></button>
+
         <span id="app-version" class="app-version topbar-more-desktop" style="font-size:0.7rem;color:var(--robot-text-muted)"></span>
 
         <select id="lang-selector" class="lang-selector topbar-more-desktop" onchange="setLanguage(this.value)">
@@ -224,6 +228,7 @@
               <option value="zh-CN">简体中文</option>
             </select>
             <button class="btn btn-global" onclick="closeTopbarMore();showModal('modal-help')"><i data-lucide="help-circle"></i> <span data-i18n="topbar.help">Help</span></button>
+            <button onclick="closeTopbarMore();toggleDemoMode()"><i data-lucide="cpu"></i> <span id="demo-toggle-mobile" data-i18n="topbar.demoMode">Demo 模式</span></button>
             <button onclick="closeTopbarMore();logout()"><i data-lucide="log-out"></i> <span data-i18n="topbar.logout">Logout</span></button>
           </div>
         </div>
@@ -313,6 +318,7 @@
           <button class="ai-panel-tab" data-mode="planner" onclick="switchAiMode(this)"><i data-lucide="list-todo"></i> <span data-i18n="aiAssist.modes.planner">任務規劃師</span></button>
           <button class="ai-panel-tab" data-mode="debugger" onclick="switchAiMode(this)"><i data-lucide="bug"></i> <span data-i18n="aiAssist.modes.debugger">座標除錯器</span></button>
           <button class="ai-panel-tab" data-mode="generator" onclick="switchAiMode(this)"><i data-lucide="code"></i> <span data-i18n="aiAssist.modes.generator">代碼生成器</span></button>
+          <button class="ai-panel-tab" data-mode="lerobot" onclick="switchAiMode(this)"><i data-lucide="cpu"></i> <span data-i18n="aiAssist.modes.lerobot">LeRobot 代碼</span></button>
         </div>
         <button class="btn btn-icon" onclick="toggleAiPanel()" aria-label="Close AI Panel"><i data-lucide="x"></i></button>
       </div>
@@ -403,7 +409,7 @@ reset_home()         - 回到安全初始位置</code></pre>
             </section>
             <section>
               <h4 style="font-weight:600;margin-bottom:var(--space-sm);display:flex;align-items:center;gap:var(--space-sm)"><i data-lucide="info"></i> 關於</h4>
-              <p style="color:var(--robot-text-secondary);font-size:0.875rem">Harmony <span id="about-version">v0.1.3</span> - AIEduChat 自然語言機械手臂控制平台測試版<br>技術棧: Vanilla JS + Supabase + Azure OpenAI</p>
+              <p style="color:var(--robot-text-secondary);font-size:0.875rem">Harmony <span id="about-version">v0.1.5</span> - AIEduChat 自然語言機械手臂控制平台測試版<br>技術棧: Vanilla JS + Supabase + Azure OpenAI</p>
             </section>
           </div>
         </div>
@@ -452,7 +458,7 @@ reset_home()         - 回到安全初始位置</code></pre>
           <h3 style="font-size:1.5rem;font-weight:700;margin-bottom:var(--space-xs)">Harmony</h3>
           <p style="color:var(--robot-text-muted);margin-bottom:var(--space-lg)">AIEduChat 自然語言機械手臂控制平台</p>
           <div style="display:flex;justify-content:center;gap:var(--space-lg);font-size:0.8125rem;color:var(--robot-text-secondary);flex-wrap:wrap">
-            <div><strong>版本</strong><br><span id="about-version-modal">v0.1.3</span></div>
+            <div><strong>版本</strong><br><span id="about-version-modal">v0.1.5</span></div>
             <div><strong>建置日期</strong><br>2026-09-11</div>
             <div><strong>模式</strong><br>測試版 MVP</div>
           </div>

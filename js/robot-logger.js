@@ -284,6 +284,95 @@ const robotLogger = {
     code += `    main()\n`;
     
     return code;
+  },
+
+  // 生成 LeRobot CLI 代碼 (給 AI Assist LeRobot 分頁與模擬後按鈕用)
+  generateLeRobotCode(context) {
+    const { task, objects = [], session } = context || {};
+    const cfg = DEMO_CONFIG?.lerobot || {};
+    
+    const followerPort = cfg.followerPort || 'COM5';
+    const leaderPort = cfg.leaderPort || 'COM6';
+    const followerId = cfg.followerId || 'my_awesome_follower_arm';
+    const leaderId = cfg.leaderId || 'my_awesome_leader_arm';
+    const episodes = cfg.datasetEpisodes || 30;
+    const fps = cfg.datasetFps || 30;
+    const trainSteps = cfg.trainSteps || 300000;
+    const batchSize = cfg.trainBatchSize || 8;
+    const saveFreq = cfg.saveFreq || 5000;
+
+    const sessionName = session?.name || 'session';
+    const safeName = sessionName.toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/^_|_$/g, '');
+    const repoId = `local/${safeName}_${Date.now().toString(36)}`;
+    const datasetRoot = `dataset/${safeName}`;
+
+    const taskDesc = task || sessionName || 'grab object and place';
+    const singleTask = taskDesc.replace(/"/g, '\\"');
+
+    let code = `# ===== LeRobot SO-101 代碼生成 (Harmony) =====\n`;
+    code += `# 任務: ${singleTask}\n`;
+    code += `# 生成時間: ${new Date().toISOString()}\n`;
+    code += `# 工作階段: ${sessionName}\n\n`;
+
+    // 偵測物件座標註解
+    if (objects.length > 0) {
+      code += `# 偵測物件座標:\n`;
+      objects.forEach(obj => {
+        if (obj.world) {
+          code += `#   ${obj.name}: [${obj.world[0].toFixed(4)}, ${obj.world[1].toFixed(4)}, ${obj.world[2].toFixed(4)}] m\n`;
+        }
+      });
+      code += `\n`;
+    }
+
+    code += `lerobot-find-port\n\n`;
+
+    // 校正
+    code += `# 校正 (請依環境調整 COM 埠)\n`;
+    code += `lerobot-calibrate --robot.type=so101_follower --robot.port=${followerPort} --robot.id=${followerId}\n`;
+    code += `lerobot-calibrate --teleop.type=so101_leader --teleop.port=${leaderPort} --teleop.id=${leaderId}\n\n`;
+
+    // 測試雙臂
+    code += `# 測試雙臂遙操作\n`;
+    code += `python -m lerobot.teleoperate \\\n`;
+    code += `  --robot.type=so101_follower --robot.port=${followerPort} --robot.id=${followerId} \\\n`;
+    code += `  --teleop.type=so101_leader --teleop.port=${leaderPort} --teleop.id=${leaderId} \\\n`;
+    code += `  --display_data=true\n\n`;
+
+    // 錄製資料集
+    code += `# 錄製資料集 (停止遙操作後執行，確保 COM${followerPort}/${leaderPort} 空閒)\n`;
+    code += `python -m lerobot.record \\\n`;
+    code += `  --robot.type=so101_follower --robot.port=${followerPort} --robot.id=${followerId} \\\n`;
+    code += `  --robot.cameras="{ handeye: {type: opencv, index_or_path: 2, width: 640, height: 480, fps: ${fps}, warmup_s: 3}, fixed: {type: opencv, index_or_path: 1, width: 640, height: 480, fps: ${fps}, warmup_s: 3}}" \\\n`;
+    code += `  --teleop.type=so101_leader --teleop.port=${leaderPort} --teleop.id=${leaderId} \\\n`;
+    code += `  --display_data=true --play_sounds=false \\\n`;
+    code += `  --dataset.repo_id=${repoId} \\\n`;
+    code += `  --dataset.root=${datasetRoot} \\\n`;
+    code += `  --dataset.num_episodes=${episodes} \\\n`;
+    code += `  --dataset.single_task="${singleTask}" \\\n`;
+    code += `  --dataset.fps=${fps} --dataset.push_to_hub=false\n\n`;
+
+    // 訓練 (from scratch)
+    code += `# 訓練 ACT 策略 (from scratch)\n`;
+    code += `python src/lerobot/scripts/train.py \\\n`;
+    code += `  --dataset.repo_id=${repoId} \\\n`;
+    code += `  --dataset.root=${datasetRoot} \\\n`;
+    code += `  --dataset.auto_drop_static_start=true \\\n`;
+    code += `  --dataset.motion_threshold=1.0 \\\n`;
+    code += `  --policy.type=act \\\n`;
+    code += `  --output_dir=outputs/train/${safeName} \\\n`;
+    code += `  --job_name="${singleTask}" \\\n`;
+    code += `  --policy.device=cuda --wandb.enable=false --policy.push_to_hub=false \\\n`;
+    code += `  --batch_size=${batchSize} --steps=${trainSteps} --save_freq=${saveFreq}\n\n`;
+
+    // 測試雙臂 (再次)
+    code += `# 測試訓練後模型 (雙臂遙操作)\n`;
+    code += `python -m lerobot.teleoperate \\\n`;
+    code += `  --robot.type=so101_follower --robot.port=${followerPort} --robot.id=${followerId} \\\n`;
+    code += `  --teleop.type=so101_leader --teleop.port=${leaderPort} --teleop.id=${leaderId} \\\n`;
+    code += `  --display_data=true\n`;
+
+    return code;
   }
 };
 
