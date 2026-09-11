@@ -62,7 +62,6 @@
   /* Layout */
   --sidebar-width: 320px;
   --topbar-height: 64px;
-  --ai-panel-width: min(calc((100vw - var(--sidebar-width)) * 0.4), 640px);
   --chat-input-height: 60px;
 }
 
@@ -517,7 +516,7 @@ body {
 
 /* ===== Responsive ===== */
 @media (max-width: 768px) {
-  :root { --sidebar-width: 100%; --ai-panel-width: 100%; }
+  :root { --sidebar-width: 100%; }
   .btn { padding: var(--space-sm) var(--space-md); }
   .card { border-radius: var(--radius-md); }
   .modal { margin: var(--space-md); max-height: calc(100vh - 2 * var(--space-md)); }

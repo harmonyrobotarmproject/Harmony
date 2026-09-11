@@ -102,7 +102,8 @@ window.LOCALE_EN = {
       designer: 'Command Designer',
       planner: 'Task Planner',
       debugger: 'Coordinate Debugger',
-      generator: 'Code Generator'
+      generator: 'Code Generator',
+      lerobot: 'LeRobot Code'
     },
     designerDesc: 'Help refine natural language for better parsing',
     plannerDesc: 'Discuss multi-step task decomposition',

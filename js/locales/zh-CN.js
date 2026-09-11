@@ -102,7 +102,8 @@ window.LOCALE_ZH_CN = {
       designer: '指令设计师',
       planner: '任务规划师',
       debugger: '坐标调试器',
-      generator: '代码生成器'
+      generator: '代码生成器',
+      lerobot: 'LeRobot 代码'
     },
     designerDesc: '协助优化自然语言以获得更好的解析结果',
     plannerDesc: '讨论多步骤任务分解',

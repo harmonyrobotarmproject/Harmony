@@ -102,7 +102,8 @@ window.LOCALE_ZH_TW = {
       designer: '指令設計師',
       planner: '任務規劃師',
       debugger: '座標除錯器',
-      generator: '代碼生成器'
+      generator: '代碼生成器',
+      lerobot: 'LeRobot 代碼'
     },
     designerDesc: '協助優化自然語言以獲得更好的解析結果',
     plannerDesc: '討論多步驟任務分解',

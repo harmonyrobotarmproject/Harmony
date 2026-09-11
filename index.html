@@ -42,8 +42,8 @@
   <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&family=Noto+Sans+TC:wght@400;500;700;900&display=swap" rel="stylesheet">
 
   <!-- Styles -->
-  <link rel="stylesheet" href="styles/main.css?v=20260911g">
-  <link rel="stylesheet" href="styles/harmony-theme.css?v=20260911g">
+  <link rel="stylesheet" href="styles/main.css?v=20260911h">
+  <link rel="stylesheet" href="styles/harmony-theme.css?v=20260911h">
 
   <!-- External Libraries -->
   <script src="https://unpkg.com/lucide@0.469.0"></script>
@@ -52,28 +52,28 @@
   <script src="https://cdn.jsdelivr.net/npm/dompurify@3/dist/purify.min.js"></script>
 
   <!-- Config (must load first) -->
-  <script src="js/config.js"></script>
+  <script src="js/config.js?v=20260911h"></script>
   <script src="js/config.local.js" onerror="console.log('config.local.js not found, using defaults')"></script>
 
   <!-- i18n (load before app) -->
-  <script src="js/locales/en.js"></script>
-  <script src="js/locales/zh-TW.js"></script>
-  <script src="js/locales/zh-CN.js"></script>
-  <script src="js/i18n.js"></script>
+  <script src="js/locales/en.js?v=20260911h"></script>
+  <script src="js/locales/zh-TW.js?v=20260911h"></script>
+  <script src="js/locales/zh-CN.js?v=20260911h"></script>
+  <script src="js/i18n.js?v=20260911h"></script>
 
   <!-- Core Libraries -->
-  <script src="js/db.js"></script>
-  <script src="js/render.js"></script>
-  <script src="js/ai-transport.js"></script>
+  <script src="js/db.js?v=20260911h"></script>
+  <script src="js/render.js?v=20260911h"></script>
+  <script src="js/ai-transport.js?v=20260911h"></script>
 
   <!-- Robot Modules -->
-  <script src="js/robot-vision.js"></script>
-  <script src="js/robot-parser.js"></script>
-  <script src="js/robot-logger.js"></script>
-  <script src="js/robot-simulator.js"></script>
+  <script src="js/robot-vision.js?v=20260911h"></script>
+  <script src="js/robot-parser.js?v=20260911h"></script>
+  <script src="js/robot-logger.js?v=20260911h"></script>
+  <script src="js/robot-simulator.js?v=20260911h"></script>
 
   <!-- Main App (must load last) -->
-  <script src="js/app.js"></script>
+  <script src="js/app.js?v=20260911h"></script>
 
   <!-- Inline Init -->
   <script>
@@ -83,7 +83,7 @@
         lucide.createIcons();
       }
       // Show version
-      document.getElementById('app-version').textContent = window.APP_VERSION || 'v0.1.9';
+      document.getElementById('app-version').textContent = window.APP_VERSION || 'v0.1.10';
       // Start app
       if (typeof initApp === 'function') {
         initApp();
@@ -276,12 +276,36 @@
               <!-- Messages rendered here -->
             </div>
 
+            <!-- Inline AI Assistant (shown when session active) -->
+            <div id="ai-assistant-inline" class="ai-assistant-inline hidden">
+              <div class="ai-assistant-header">
+                <h3 style="font-size:0.875rem;font-weight:600" data-i18n="aiAssist.title">AI 助手</h3>
+                <div class="ai-assistant-tabs">
+                  <button class="ai-assistant-tab active" data-mode="designer" onclick="switchAiMode(this)"><i data-lucide="pencil-ruler"></i> <span data-i18n="aiAssist.modes.designer">指令設計師</span></button>
+                  <button class="ai-assistant-tab" data-mode="planner" onclick="switchAiMode(this)"><i data-lucide="list-todo"></i> <span data-i18n="aiAssist.modes.planner">任務規劃師</span></button>
+                  <button class="ai-assistant-tab" data-mode="debugger" onclick="switchAiMode(this)"><i data-lucide="bug"></i> <span data-i18n="aiAssist.modes.debugger">座標除錯器</span></button>
+                  <button class="ai-assistant-tab" data-mode="generator" onclick="switchAiMode(this)"><i data-lucide="code"></i> <span data-i18n="aiAssist.modes.generator">代碼生成器</span></button>
+                  <button class="ai-assistant-tab" data-mode="lerobot" onclick="switchAiMode(this)"><i data-lucide="cpu"></i> <span data-i18n="aiAssist.modes.lerobot">LeRobot 代碼</span></button>
+                </div>
+                <button class="btn btn-icon btn-sm" onclick="toggleAiAssistantInline()" aria-label="Toggle AI Assistant"><i data-lucide="chevron-up"></i></button>
+              </div>
+              <div class="ai-assistant-body" id="ai-assistant-body">
+                <div class="ai-chat-messages" id="ai-chat-messages"></div>
+              </div>
+              <div class="ai-assistant-footer">
+                <div class="ai-input-area">
+                  <textarea id="ai-input" class="input ai-input" placeholder="詢問 AI 關於機械手臂指令..." data-i18n-placeholder="aiAssist.placeholder" rows="1"></textarea>
+                  <button class="btn btn-primary btn-sm" onclick="sendAiMessage()"><i data-lucide="send"></i></button>
+                </div>
+              </div>
+            </div>
+
             <div class="chat-input-area">
               <div class="chat-input-wrapper">
                 <textarea id="chat-input" class="chat-input" placeholder="輸入訊息或機械手臂指令..." data-i18n-placeholder="chat.placeholder" rows="1"></textarea>
                 <div class="chat-input-actions">
                   <button class="btn btn-icon" onclick="handleImageUpload()" aria-label="Upload Image" title="上傳圖片"><i data-lucide="image"></i></button>
-                  <button class="btn btn-icon" onclick="toggleAiPanel()" aria-label="AI Assist" title="AI 協助"><i data-lucide="bot"></i></button>
+                  <button class="btn btn-icon" onclick="toggleAiAssistantInline()" aria-label="AI Assist" title="AI 協助"><i data-lucide="bot"></i></button>
                   <button class="btn btn-primary" onclick="sendMessage()" data-i18n="chat.send"><i data-lucide="send"></i></button>
                 </div>
               </div>
@@ -308,31 +332,6 @@
         </div>
       </div>
     </div>
-
-    <!-- AI Assist Panel -->
-    <aside id="ai-panel" class="ai-panel" role="dialog" aria-label="AI Assistant">
-      <div class="ai-panel-header">
-        <h3 style="font-size:1rem;font-weight:600" data-i18n="aiAssist.title">AI 助手</h3>
-        <div class="ai-panel-tabs">
-          <button class="ai-panel-tab active" data-mode="designer" onclick="switchAiMode(this)"><i data-lucide="pencil-ruler"></i> <span data-i18n="aiAssist.modes.designer">指令設計師</span></button>
-          <button class="ai-panel-tab" data-mode="planner" onclick="switchAiMode(this)"><i data-lucide="list-todo"></i> <span data-i18n="aiAssist.modes.planner">任務規劃師</span></button>
-          <button class="ai-panel-tab" data-mode="debugger" onclick="switchAiMode(this)"><i data-lucide="bug"></i> <span data-i18n="aiAssist.modes.debugger">座標除錯器</span></button>
-          <button class="ai-panel-tab" data-mode="generator" onclick="switchAiMode(this)"><i data-lucide="code"></i> <span data-i18n="aiAssist.modes.generator">代碼生成器</span></button>
-          <button class="ai-panel-tab" data-mode="lerobot" onclick="switchAiMode(this)"><i data-lucide="cpu"></i> <span data-i18n="aiAssist.modes.lerobot">LeRobot 代碼</span></button>
-        </div>
-        <button class="btn btn-icon" onclick="toggleAiPanel()" aria-label="Close AI Panel"><i data-lucide="x"></i></button>
-      </div>
-      <div class="ai-panel-body" id="ai-panel-body">
-        <!-- AI Chat Messages -->
-        <div class="ai-chat-messages" id="ai-chat-messages"></div>
-      </div>
-      <div class="ai-panel-footer">
-        <div class="ai-input-area">
-          <textarea id="ai-input" class="input ai-input" placeholder="詢問 AI 關於機械手臂指令..." data-i18n-placeholder="aiAssist.placeholder" rows="1"></textarea>
-          <button class="btn btn-primary" onclick="sendAiMessage()"><i data-lucide="send"></i></button>
-        </div>
-      </div>
-    </aside>
 
     <!-- Mobile Sidebar Overlay -->
     <div class="sidebar-overlay" id="sidebar-overlay" onclick="closeSidebar()"></div>
@@ -414,7 +413,7 @@ reset_home()         - 回到安全初始位置</code></pre>
             </section>
             <section>
               <h4 style="font-weight:600;margin-bottom:var(--space-sm);display:flex;align-items:center;gap:var(--space-sm)"><i data-lucide="info"></i> 關於</h4>
-              <p style="color:var(--robot-text-secondary);font-size:0.875rem">Harmony <span id="about-version">v0.1.9</span> - AIEduChat 自然語言機械手臂控制平台測試版<br>技術棧: Vanilla JS + Supabase + Azure OpenAI</p>
+              <p style="color:var(--robot-text-secondary);font-size:0.875rem">Harmony <span id="about-version">v0.1.10</span> - AIEduChat 自然語言機械手臂控制平台測試版<br>技術棧: Vanilla JS + Supabase + Azure OpenAI</p>
             </section>
           </div>
         </div>
@@ -463,7 +462,7 @@ reset_home()         - 回到安全初始位置</code></pre>
           <h3 style="font-size:1.5rem;font-weight:700;margin-bottom:var(--space-xs)">Harmony</h3>
           <p style="color:var(--robot-text-muted);margin-bottom:var(--space-lg)">AIEduChat 自然語言機械手臂控制平台</p>
           <div style="display:flex;justify-content:center;gap:var(--space-lg);font-size:0.8125rem;color:var(--robot-text-secondary);flex-wrap:wrap">
-            <div><strong>版本</strong><br><span id="about-version-modal">v0.1.9</span></div>
+            <div><strong>版本</strong><br><span id="about-version-modal">v0.1.10</span></div>
             <div><strong>建置日期</strong><br>2026-09-11</div>
             <div><strong>模式</strong><br>測試版 MVP</div>
           </div>

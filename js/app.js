@@ -28,7 +28,7 @@ let currentProfile = null;
 let currentSessionId = null;
 let messageChannel = null;
 let objectsChannel = null;
-let aiPanelOpen = false;
+let aiAssistantInlineOpen = false;
 let currentAiMode = 'designer';
 
 // ===== Supabase Init =====
@@ -77,6 +77,13 @@ function showAuthPage() {
   document.getElementById('page-auth').classList.add('active');
   document.getElementById('page-main').classList.remove('active');
   cleanupChannels();
+  
+  // 隱藏內嵌 AI 助手
+  const aiInline = document.getElementById('ai-assistant-inline');
+  if (aiInline) {
+    aiInline.classList.add('hidden');
+    aiAssistantInlineOpen = false;
+  }
 }
 
 function showMainApp() {
@@ -222,6 +229,13 @@ async function selectSession(sessionId) {
   subscribeToRealtime(sessionId);
   
   showToast(t('notification.sessionLoaded', session.name), 'success');
+
+  // 顯示內嵌 AI 助手
+  const aiInline = document.getElementById('ai-assistant-inline');
+  if (aiInline) {
+    aiInline.classList.remove('hidden');
+    aiAssistantInlineOpen = true;
+  }
 }
 
 async function createSession() {
@@ -341,6 +355,13 @@ async function deleteSession(sessionId) {
     robotSimulator.reset();
     document.getElementById('current-session-name').textContent = t('chat.noSession');
     document.getElementById('message-area').innerHTML = '';
+    
+    // 隱藏內嵌 AI 助手
+    const aiInline = document.getElementById('ai-assistant-inline');
+    if (aiInline) {
+      aiInline.classList.add('hidden');
+      aiAssistantInlineOpen = false;
+    }
   }
   
   loadSessions();
@@ -609,27 +630,33 @@ function cleanupChannels() {
   objectsChannel = null;
 }
 
-// ===== AI Assist Panel =====
-function toggleAiPanel() {
-  const panel = document.getElementById('ai-panel');
-  aiPanelOpen = !aiPanelOpen;
-  panel.classList.toggle('open', aiPanelOpen);
+// ===== AI Assist Inline =====
+function toggleAiAssistantInline() {
+  const panel = document.getElementById('ai-assistant-inline');
+  aiAssistantInlineOpen = !aiAssistantInlineOpen;
+  panel.classList.toggle('hidden', !aiAssistantInlineOpen);
   
-  if (aiPanelOpen) {
+  const chevron = panel.querySelector('.ai-assistant-header button i');
+  if (chevron) {
+    chevron.dataset.lucide = aiAssistantInlineOpen ? 'chevron-up' : 'chevron-down';
+    if (typeof lucide !== 'undefined') lucide.createIcons({ nodes: [chevron] });
+  }
+  
+  if (aiAssistantInlineOpen) {
     document.getElementById('ai-input').focus();
     loadAiMode(currentAiMode);
   }
 }
 
 function switchAiMode(btn) {
-  document.querySelectorAll('.ai-panel-tab').forEach(b => b.classList.remove('active'));
+  document.querySelectorAll('.ai-assistant-tab').forEach(b => b.classList.remove('active'));
   btn.classList.add('active');
   currentAiMode = btn.dataset.mode;
   loadAiMode(currentAiMode);
 }
 
 function loadAiMode(mode) {
-  const body = document.getElementById('ai-panel-body');
+  const body = document.getElementById('ai-assistant-body');
   const modeInfo = {
     designer: { title: '指令設計師', desc: '協助優化自然語言指令', placeholder: '請描述您想讓機械手臂做什麼...' },
     planner: { title: '任務規劃師', desc: '協助分解複雜任務為可執行步驟', placeholder: '描述完整任務目標...' },
@@ -790,7 +817,8 @@ function appendAiMessage(content, role, id = null) {
   `;
   
   container.appendChild(div);
-  container.scrollTop = container.scrollHeight;
+  const scrollable = document.getElementById('ai-assistant-body');
+  if (scrollable) scrollable.scrollTop = scrollable.scrollHeight;
   
   if (typeof lucide !== 'undefined') lucide.createIcons({ nodes: [div] });
 }
@@ -900,8 +928,8 @@ function toggleDemoMode() {
     }
   }
   
-  // 如果在 AI 面板，重新載入當前模式提示
-  if (document.getElementById('ai-panel').classList.contains('open')) {
+  // 如果在 AI 助手內嵌面板，重新載入當前模式提示
+  if (document.getElementById('ai-assistant-inline') && !document.getElementById('ai-assistant-inline').classList.contains('hidden')) {
     loadAiMode(currentAiMode);
   }
 }
@@ -1115,7 +1143,7 @@ function initApp() {
     }
   }, false);
   
-  console.log('Harmony ' + (window.APP_VERSION || 'v0.1.9') + ' initialized');
+  console.log('Harmony ' + (window.APP_VERSION || 'v0.1.10') + ' initialized');
 }
 
 // 全域函數供 HTML 使用
@@ -1146,7 +1174,7 @@ window.runVision = runVision;
 window.runSimulation = runSimulation;
 window.sendMessage = sendMessage;
 window.handleImageUpload = handleImageUpload;
-window.toggleAiPanel = toggleAiPanel;
+window.toggleAiAssistantInline = toggleAiAssistantInline;
 window.switchAiMode = switchAiMode;
 window.sendAiMessage = sendAiMessage;
 window.downloadCurrentLog = downloadCurrentLog;
